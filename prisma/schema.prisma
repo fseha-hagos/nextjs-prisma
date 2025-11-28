@@ -1,0 +1,160 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                 String               @id @default(cuid())
+  email              String               @unique
+  password           String?
+  createdAt          DateTime             @default(now())
+  // relation to organization plugin tables
+  OrganizationMember OrganizationMember[]
+  name               String
+  emailVerified      Boolean              @default(false)
+  image              String?
+  updatedAt          DateTime             @updatedAt
+  sessions           Session[]
+  accounts           Account[]
+
+  @@map("user")
+}
+
+model Organization {
+  id          String               @id @default(cuid())
+  name        String
+  slug        String?              @unique
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  members     OrganizationMember[]
+  invitations Invitation[]
+  outlines    Outline[]
+
+  @@map("organization")
+}
+
+model OrganizationMember {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String
+  role           String // "owner" | "admin" | "member"
+  joinedAt       DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([userId, organizationId])
+  @@map("organization_member")
+}
+
+model Invitation {
+  id             String   @id @default(cuid())
+  email          String
+  organizationId String
+  role           String   @default("member")
+  status         String   @default("pending") // "pending" | "accepted" | "expired"
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([email, organizationId])
+  @@index([organizationId])
+  @@map("invitation")
+}
+
+model Outline {
+  id             String      @id @default(cuid())
+  header         String
+  sectionType    SectionType
+  status         Status
+  target         Int?
+  limit          Int?
+  reviewer       Reviewer
+  organizationId String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+}
+
+enum SectionType {
+  Table_of_Contents
+  Executive_Summary
+  Technical_Approach
+  Design
+  Capabilities
+  Focus_Document
+  Narrative
+}
+
+enum Status {
+  Pending
+  In_Progress
+  Completed
+}
+
+enum Reviewer {
+  Assim
+  Bini
+  Mami
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
