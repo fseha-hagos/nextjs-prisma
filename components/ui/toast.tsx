@@ -12,7 +12,7 @@ const toastVariants = cva(
       variant: {
         default: "border bg-background text-foreground",
         destructive:
-          "destructive group border-destructive bg-destructive text-destructive-foreground",
+          "border-destructive bg-destructive text-destructive-foreground",
         success:
           "border-green-200 bg-green-50 text-green-900 dark:border-green-800 dark:bg-green-950 dark:text-green-100",
       },
@@ -23,36 +23,39 @@ const toastVariants = cva(
   }
 )
 
-interface ToastProps extends VariantProps<typeof toastVariants> {
+export type ToastActionElement = React.ReactElement
+
+export interface ToastProps extends VariantProps<typeof toastVariants> {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
-  action?: React.ReactNode
+  action?: ToastActionElement
   open?: boolean
   onOpenChange?: (open: boolean) => void
 }
 
-const Toast = React.forwardRef<
+export const Toast = React.forwardRef<
   HTMLDivElement,
-  ToastProps & React.HTMLAttributes<HTMLDivElement>
+  ToastProps & Omit<React.HTMLAttributes<HTMLDivElement>, 'title'>
 >(({ className, variant, id, title, description, action, open, onOpenChange, ...props }, ref) => {
+
+  // Auto close after 5 seconds
   React.useEffect(() => {
     if (open) {
-      // Auto-dismiss after delay
       const timer = setTimeout(() => {
         onOpenChange?.(false)
       }, 5000)
       return () => clearTimeout(timer)
     }
-  }, [open, onOpenChange])
+  }, [open])
 
   if (!open) return null
 
   return (
     <div
       ref={ref}
+      data-state={open ? "open" : "closed"}
       className={cn(toastVariants({ variant }), "pointer-events-auto", className)}
-      data-state={open ? 'open' : 'closed'}
       {...props}
     >
       <div className="grid gap-1 flex-1">
@@ -61,10 +64,12 @@ const Toast = React.forwardRef<
           <div className="text-sm opacity-90">{description}</div>
         )}
       </div>
+
       {action}
+
       <button
         onClick={() => onOpenChange?.(false)}
-        className="absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50"
+        className="absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100"
       >
         <X className="h-4 w-4" />
       </button>
@@ -73,7 +78,7 @@ const Toast = React.forwardRef<
 })
 Toast.displayName = "Toast"
 
-const ToastViewport = React.forwardRef<
+export const ToastViewport = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, children, ...props }, ref) => (
@@ -89,6 +94,3 @@ const ToastViewport = React.forwardRef<
   </div>
 ))
 ToastViewport.displayName = "ToastViewport"
-
-export { Toast, ToastViewport, toastVariants }
-export type { ToastProps }
