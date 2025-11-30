@@ -3,7 +3,8 @@ import type { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/db';
 
-// GET - List all organizations for the current user
+// GET - List organizations the current user is a member of
+// Returns empty array if user has no memberships (frontend will show create/join page)
 export async function GET(req: NextRequest) {
   try {
     // Pass request headers directly - Better Auth will extract cookies from them
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Get user's organizations from database
+    // Get only organizations where the user is a member
     const memberships = await prisma.member.findMany({
       where: {
         userId: session.user.id,
