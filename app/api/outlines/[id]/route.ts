@@ -6,7 +6,7 @@ import prisma from '@/lib/db';
 // GET - Get a specific outline
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth.api.getSession({ headers: req.headers });
@@ -18,7 +18,7 @@ export async function GET(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     const outline = await prisma.outline.findUnique({
       where: { id },
@@ -35,7 +35,7 @@ export async function GET(
     }
 
     // Verify user is a member of the organization
-    const membership = await prisma.organizationMember.findUnique({
+    const membership = await prisma.member.findUnique({
       where: {
         userId_organizationId: {
           userId: session.user.id,
@@ -64,7 +64,7 @@ export async function GET(
 // PUT - Update an outline
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth.api.getSession({ headers: req.headers });
@@ -76,7 +76,7 @@ export async function PUT(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     const body = await req.json();
     const { header, sectionType, status, reviewer, target, limit } = body;
 
@@ -93,7 +93,7 @@ export async function PUT(
     }
 
     // Verify user is a member of the organization
-    const membership = await prisma.organizationMember.findUnique({
+    const membership = await prisma.member.findUnique({
       where: {
         userId_organizationId: {
           userId: session.user.id,
@@ -135,7 +135,7 @@ export async function PUT(
 // DELETE - Delete an outline
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth.api.getSession({ headers: req.headers });
@@ -147,7 +147,7 @@ export async function DELETE(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Get the outline first to check permissions
     const outline = await prisma.outline.findUnique({
@@ -162,7 +162,7 @@ export async function DELETE(
     }
 
     // Verify user is a member of the organization
-    const membership = await prisma.organizationMember.findUnique({
+    const membership = await prisma.member.findUnique({
       where: {
         userId_organizationId: {
           userId: session.user.id,

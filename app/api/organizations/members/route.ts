@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get organization members from database
-    const members = await prisma.organizationMember.findMany({
+    const members = await prisma.member.findMany({
       where: {
         organizationId: orgId,
       },
@@ -79,20 +79,35 @@ export async function POST(req: NextRequest) {
     });
 
     if (user) {
-      // User exists, add them directly to the organization
+      // User exists, add them directly to the organization using Prisma
       try {
-        await auth.api.addMemberToOrganization({
-          body: {
-            organizationId: orgId,
+        // Check if member already exists
+        const existingMember = await prisma.member.findUnique({
+          where: {
+            userId_organizationId: {
+              userId: user.id,
+              organizationId: orgId,
+            },
+          },
+        });
+
+        if (existingMember) {
+          return NextResponse.json({ success: true, message: 'Member already exists' });
+        }
+
+        // Create new member
+        await prisma.member.create({
+          data: {
             userId: user.id,
+            organizationId: orgId,
             role,
           },
-          headers: req.headers,
         });
+
         return NextResponse.json({ success: true, message: 'Member added successfully' });
       } catch (error: any) {
-        // If member already exists, return success
-        if (error.message?.includes('already') || error.message?.includes('exists')) {
+        // If member already exists (unique constraint violation), return success
+        if (error.code === 'P2002' || error.message?.includes('already') || error.message?.includes('exists')) {
           return NextResponse.json({ success: true, message: 'Member already exists' });
         }
         throw error;
@@ -102,21 +117,60 @@ export async function POST(req: NextRequest) {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7); // Invitation expires in 7 days
 
-      const invitation = await prisma.invitation.create({
-        data: {
-          email,
-          organizationId: orgId,
-          role,
-          expiresAt,
-          status: 'pending',
-        },
-      });
+      try {
+        // Check if invitation already exists
+        const existingInvite = await prisma.invite.findUnique({
+          where: {
+            email_organizationId: {
+              email,
+              organizationId: orgId,
+            },
+          },
+        });
 
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Invitation created',
-        invitation 
-      });
+        if (existingInvite) {
+          // Update existing invitation
+          const invitation = await prisma.invite.update({
+            where: {
+              email_organizationId: {
+                email,
+                organizationId: orgId,
+              },
+            },
+            data: {
+              role,
+              expiresAt,
+              status: 'pending',
+            },
+          });
+
+          return NextResponse.json({ 
+            success: true, 
+            message: 'Invitation updated',
+            invitation 
+          });
+        } else {
+          // Create new invitation
+          const invitation = await prisma.invite.create({
+            data: {
+              email,
+              organizationId: orgId,
+              role,
+              expiresAt,
+              status: 'pending',
+            },
+          });
+
+          return NextResponse.json({ 
+            success: true, 
+            message: 'Invitation created',
+            invitation 
+          });
+        }
+      } catch (error: any) {
+        console.error('Failed to create invitation:', error);
+        throw error;
+      }
     }
   } catch (error: any) {
     console.error('Failed to invite member:', error);

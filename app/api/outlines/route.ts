@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Verify user is a member of the organization
-    const membership = await prisma.organizationMember.findUnique({
+    const membership = await prisma.member.findUnique({
       where: {
         userId_organizationId: {
           userId: session.user.id,
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify user is a member of the organization
-    const membership = await prisma.organizationMember.findUnique({
+    const membership = await prisma.member.findUnique({
       where: {
         userId_organizationId: {
           userId: session.user.id,

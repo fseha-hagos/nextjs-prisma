@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
+import prisma from '@/lib/db';
 
 // DELETE - Remove a member from an organization
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { memberId: string } }
+  { params }: { params: Promise<{ memberId: string }> }
 ) {
   try {
     const session = await auth.api.getSession({ headers: req.headers });
@@ -17,7 +18,7 @@ export async function DELETE(
       );
     }
 
-    const { memberId } = params;
+    const { memberId } = await params;
     const { searchParams } = new URL(req.url);
     const orgId = searchParams.get('orgId');
 
@@ -28,13 +29,46 @@ export async function DELETE(
       );
     }
 
-    // Remove member using Better Auth
-    await auth.api.removeMemberFromOrganization({
-      body: {
-        organizationId: orgId,
-        userId: memberId,
+    // Verify the current user is an owner
+    const currentUserMember = await prisma.member.findUnique({
+      where: {
+        userId_organizationId: {
+          userId: session.user.id,
+          organizationId: orgId,
+        },
       },
-      headers: req.headers,
+    });
+
+    if (!currentUserMember || currentUserMember.role !== 'owner') {
+      return NextResponse.json(
+        { error: 'Only organization owners can remove members' },
+        { status: 403 }
+      );
+    }
+
+    // Get the member to be removed
+    const memberToRemove = await prisma.member.findUnique({
+      where: { id: memberId },
+    });
+
+    if (!memberToRemove) {
+      return NextResponse.json(
+        { error: 'Member not found' },
+        { status: 404 }
+      );
+    }
+
+    // Don't allow removing owners
+    if (memberToRemove.role === 'owner') {
+      return NextResponse.json(
+        { error: 'Cannot remove organization owners' },
+        { status: 403 }
+      );
+    }
+
+    // Remove member using Prisma
+    await prisma.member.delete({
+      where: { id: memberId },
     });
 
     return NextResponse.json({ success: true });

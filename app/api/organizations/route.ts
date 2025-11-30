@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get user's organizations from database
-    const memberships = await prisma.organizationMember.findMany({
+    const memberships = await prisma.member.findMany({
       where: {
         userId: session.user.id,
       },
@@ -82,6 +82,9 @@ export async function POST(req: NextRequest) {
 
     // Better Auth returns the organization directly or in a response object
     const organization = result || (result as any)?.response || (result as any)?.data;
+   
+
+    // return NextResponse.json(orgRecord);
     return NextResponse.json(organization);
   } catch (error: any) {
     console.error('Failed to create organization:', error);

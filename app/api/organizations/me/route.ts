@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get organization member info from database
-    const member = await prisma.organizationMember.findUnique({
+    const member = await prisma.member.findUnique({
       where: {
         userId_organizationId: {
           userId: session.user.id,

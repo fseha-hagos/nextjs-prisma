@@ -21,12 +21,12 @@ export async function POST(req: NextRequest) {
     if (token) {
       const result = await auth.api.acceptInvitation({
         body: {
-          token,
+          invitationId: token, // your "token" is actually the invitation ID
         },
         headers: req.headers,
       });
 
-      return NextResponse.json(result.data);
+      return NextResponse.json(result);
     }
 
     // Otherwise, try to find and accept invitation by email
