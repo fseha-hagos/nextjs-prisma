@@ -8,11 +8,16 @@ export function Toaster() {
 
   return (
     <ToastViewport>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
-        return (
-          <Toast key={id} id={id} title={title} description={description} action={action} {...props} />
-        )
-      })}
+      {toasts.map(({ id, title, description, action, ...props }) => (
+        <Toast
+          key={id}
+          id={id}
+          title={title}
+          description={description}
+          action={action}
+          {...props}
+        />
+      ))}
     </ToastViewport>
   )
 }

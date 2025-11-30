@@ -27,9 +27,13 @@ export default function CreateOrg() {
       });
       
       if (r.ok) {
-        // Refresh organizations in context
+        const data = await r.json();
+        // Refresh organizations in context to include the new one
         await refreshOrganizations();
-        router.push('/dashboard');
+        // Use router.refresh() to force Next.js to refresh the page data
+        router.refresh();
+        // Redirect to dashboard with the new organization ID
+        router.push(`/dashboard?orgId=${data.id}`);
       } else {
         const data = await r.json();
         setError(data.error || 'Failed to create organization');

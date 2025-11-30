@@ -35,7 +35,7 @@ type Outline = {
 export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { organizations, selectedOrgId, setSelectedOrgId, loading: orgsLoading, currentUserRole } = useOrganizations();
+  const { organizations, selectedOrgId, setSelectedOrgId, loading: orgsLoading, currentUserRole, refreshOrganizations } = useOrganizations();
   const [outlines, setOutlines] = useState<Outline[]>([]);
   const [outlinesLoading, setOutlinesLoading] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -52,6 +52,32 @@ export default function DashboardPage() {
     target: '',
     limit: '',
   });
+
+  // Refresh organizations when page becomes visible (handles tab switching, etc.)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        refreshOrganizations();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [refreshOrganizations]);
+
+  // Refresh organizations when dashboard mounts or when organizations are empty
+  // This ensures organizations are loaded after login
+  useEffect(() => {
+    // If we have no organizations but we're not loading, try to refresh
+    // This handles the case where user logs in and context hasn't loaded yet
+    if (organizations.length === 0 && !orgsLoading) {
+      // Small delay to ensure session is available
+      const timer = setTimeout(() => {
+        refreshOrganizations();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [organizations.length, orgsLoading, refreshOrganizations]);
 
   useEffect(() => {
     if (selectedOrgId && !orgsLoading) {
@@ -227,7 +253,8 @@ export default function DashboardPage() {
     );
   }
 
-  if (organizations.length === 0) {
+  // Show empty state only if not loading and organizations array is empty
+  if (!orgsLoading && organizations.length === 0) {
     return (
       <div className="flex h-screen bg-background">
         <div className="flex-1 flex items-center justify-center p-6">

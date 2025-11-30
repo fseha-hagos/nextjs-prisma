@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get only organizations where the user is a member
+    // Order by creation date to ensure consistent first organization
     const memberships = await prisma.member.findMany({
       where: {
         userId: session.user.id,
@@ -27,10 +28,18 @@ export async function GET(req: NextRequest) {
       include: {
         organization: true,
       },
+      orderBy: {
+        createdAt: 'asc', // First organization joined becomes default
+      },
     });
+
+    console.log('User ID:', session.user.id);
+    console.log('Memberships found:', memberships.length);
+    console.log('Memberships:', JSON.stringify(memberships, null, 2));
 
     const organizations = memberships.map(m => m.organization);
 
+    console.log('Organizations to return:', organizations.length);
     return NextResponse.json(organizations);
   } catch (error: any) {
     console.error('Failed to fetch organizations:', error);
@@ -72,21 +81,32 @@ export async function POST(req: NextRequest) {
       .replace(/(^-|-$)/g, '')
       .substring(0, 50);
 
-    // Create organization using Better Auth
-    const result = await auth.api.createOrganization({
-      body: {
-        name,
-        slug,
-      },
-      headers: req.headers,
+    // Create organization and member atomically using a transaction
+    // This ensures data integrity: if member creation fails, organization creation is rolled back
+    const result = await prisma.$transaction(async (tx) => {
+      // Create organization manually using Prisma to avoid Better Auth's activeOrganizationId issue
+      // Better Auth tries to set activeOrganizationId on Session which doesn't exist in our schema
+      const organization = await tx.organization.create({
+        data: {
+          name,
+          slug,
+        },
+      });
+
+      // Add the creator as a member with 'owner' role
+      // If this fails, the organization creation above will be rolled back
+      await tx.member.create({
+        data: {
+          userId: session.user.id,
+          organizationId: organization.id,
+          role: 'owner',
+        },
+      });
+
+      return organization;
     });
 
-    // Better Auth returns the organization directly or in a response object
-    const organization = result || (result as any)?.response || (result as any)?.data;
-   
-
-    // return NextResponse.json(orgRecord);
-    return NextResponse.json(organization);
+    return NextResponse.json(result);
   } catch (error: any) {
     console.error('Failed to create organization:', error);
     return NextResponse.json(

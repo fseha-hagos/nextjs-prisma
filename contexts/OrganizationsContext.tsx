@@ -29,6 +29,7 @@ export function OrganizationsProvider({ children }: { children: ReactNode }) {
 
   const refreshOrganizations = useCallback(async () => {
     try {
+      setLoading(true);
       const sessionRes = await fetch('/api/auth/session', {
         credentials: 'include',
       });
@@ -36,6 +37,7 @@ export function OrganizationsProvider({ children }: { children: ReactNode }) {
       
       if (!sessionData.user) {
         router.push('/login');
+        setLoading(false);
         return;
       }
 
@@ -45,37 +47,71 @@ export function OrganizationsProvider({ children }: { children: ReactNode }) {
 
       if (orgRes.status === 401) {
         router.push('/login');
+        setLoading(false);
+        return;
+      }
+
+      if (!orgRes.ok) {
+        const errorData = await orgRes.json().catch(() => ({}));
+        console.error('Failed to fetch organizations:', orgRes.status, orgRes.statusText, errorData);
+        setOrganizations([]);
+        setLoading(false);
         return;
       }
 
       const data = await orgRes.json();
+      
+      console.log('Organizations API response status:', orgRes.status);
+      console.log('Organizations API response data:', data);
+      console.log('Is array?', Array.isArray(data));
+      
+      // Check if response is an error object
+      if (data && data.error) {
+        console.error('API returned error:', data.error);
+        setOrganizations([]);
+        setLoading(false);
+        return;
+      }
+      
       if (data && Array.isArray(data)) {
-        setOrganizations(data);
+        console.log('Setting organizations:', data.length, 'organizations');
+        // Always update organizations state, even if empty
+        // Use a new array reference to ensure React detects the change
+        setOrganizations([...data]);
         
         // Use functional update to check current selectedOrgId
         setSelectedOrgId(currentId => {
-          // Only set selectedOrgId if not already set or if current one is invalid
-          if (!currentId || !data.find((o: Organization) => o.id === currentId)) {
-            if (data.length > 0) {
-              // Get orgId from URL if available
-              if (typeof window !== 'undefined') {
-                const urlParams = new URLSearchParams(window.location.search);
-                const orgIdFromUrl = urlParams.get('orgId');
-                if (orgIdFromUrl && data.find((o: Organization) => o.id === orgIdFromUrl)) {
-                  return orgIdFromUrl;
-                } else {
-                  return data[0].id;
-                }
-              } else {
-                return data[0].id;
+          // If user has organizations, ensure first one is always selected on first load
+          if (data.length > 0) {
+            // Get orgId from URL if available
+            if (typeof window !== 'undefined') {
+              const urlParams = new URLSearchParams(window.location.search);
+              const orgIdFromUrl = urlParams.get('orgId');
+              if (orgIdFromUrl && data.find((o: Organization) => o.id === orgIdFromUrl)) {
+                return orgIdFromUrl;
               }
+            }
+            // If no current selection or current selection is invalid, use first organization
+            if (!currentId || !data.find((o: Organization) => o.id === currentId)) {
+              return data[0].id; // First organization becomes active/default
             }
           }
           return currentId;
         });
+      } else {
+        // If data is not an array, log error and set empty array
+        console.error('Organizations data is not an array:', data);
+        setOrganizations([]);
       }
+      setLoading(false);
     } catch (err) {
       console.error('Failed to fetch organizations:', err);
+      setOrganizations([]);
+      setLoading(false);
+      // Don't redirect to login on network errors, just show empty state
+      if (err instanceof Error && err.message.includes('fetch')) {
+        return;
+      }
       router.push('/login');
     }
   }, [router]);
@@ -88,6 +124,30 @@ export function OrganizationsProvider({ children }: { children: ReactNode }) {
       });
     }
   }, [initialized, refreshOrganizations]);
+
+  // Force refresh if we have a session but no organizations (handles login case)
+  // This runs once after initialization if organizations are still empty
+  useEffect(() => {
+    if (initialized && organizations.length === 0 && !loading) {
+      // Small delay to ensure session cookies are set after login
+      const timer = setTimeout(() => {
+        // Check if we have a valid session
+        fetch('/api/auth/session', { credentials: 'include' })
+          .then(res => res.json())
+          .then(data => {
+            // If we have a session but no organizations, refresh
+            if (data.user) {
+              console.log('Session detected but no organizations, refreshing...');
+              refreshOrganizations();
+            }
+          })
+          .catch(() => {
+            // Ignore errors
+          });
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [initialized]); // Only depend on initialized to avoid loops
 
   // Sync selectedOrgId with URL
   useEffect(() => {
