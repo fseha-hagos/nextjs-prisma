@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useOrganizations } from '@/contexts/OrganizationsContext';
 
 export default function CreateOrg() {
   const router = useRouter();
+  const { refreshOrganizations } = useOrganizations();
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,6 +27,8 @@ export default function CreateOrg() {
       });
       
       if (r.ok) {
+        // Refresh organizations in context
+        await refreshOrganizations();
         router.push('/dashboard');
       } else {
         const data = await r.json();
