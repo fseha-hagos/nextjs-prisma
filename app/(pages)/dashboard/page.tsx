@@ -431,26 +431,26 @@ export default function DashboardPage() {
                   >
                     Outline
                   </TabsTrigger>
-                  <TabsTrigger 
+                 <TabsTrigger 
                     value="past-performance" 
                     className="px-6 py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all relative"
                   >
                     Past Performance
-                    <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs font-semibold">3</Badge>
+                    <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs font-semibold">1</Badge>
                   </TabsTrigger>
-                  <TabsTrigger 
+                   {/* <TabsTrigger 
                     value="key-personnel" 
                     className="px-6 py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all relative"
                   >
                     Key Personnel
-                    <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs font-semibold">2</Badge>
+                    <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs font-semibold">1</Badge>
                   </TabsTrigger>
                   <TabsTrigger 
                     value="focus-documents"
                     className="px-6 py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
                   >
                     Focus Documents
-                  </TabsTrigger>
+                  </TabsTrigger> */}
                 </TabsList>
               </Tabs>
               <div className="flex items-center gap-3">
@@ -668,7 +668,7 @@ export default function DashboardPage() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  className="h-8 w-8 opacity-100  transition-opacity"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <MoreVertical className="h-4 w-4" />

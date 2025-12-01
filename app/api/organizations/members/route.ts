@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/db';
+import { sendInvitationEmail } from '@/lib/email';
 
 // GET - List members of an organization
 export async function GET(req: NextRequest) {
@@ -71,6 +72,40 @@ export async function POST(req: NextRequest) {
         { error: 'Organization ID and email are required' },
         { status: 400 }
       );
+    }
+
+    // Only organization owners can invite members
+    const currentUserMember = await prisma.member.findUnique({
+      where: {
+        userId_organizationId: {
+          userId: session.user.id,
+          organizationId: orgId,
+        },
+      },
+    });
+
+    if (!currentUserMember || currentUserMember.role !== 'owner') {
+      return NextResponse.json(
+        { error: 'Only organization owners can invite members' },
+        { status: 403 }
+      );
+    }
+
+    // Enforce a single owner per organization
+    if (role === 'owner') {
+      const existingOwner = await prisma.member.findFirst({
+        where: {
+          organizationId: orgId,
+          role: 'owner',
+        },
+      });
+
+      if (existingOwner) {
+        return NextResponse.json(
+          { error: 'Each organization can have only one owner. Invite members as \"member\" instead.' },
+          { status: 400 }
+        );
+      }
     }
 
     // Check if user exists
@@ -144,6 +179,15 @@ export async function POST(req: NextRequest) {
             },
           });
 
+          // alert(`Sending invitation email to ${email}`);
+          console.log(`Sending invitation email to ${email}`);
+
+          sendInvitationEmail(
+            email,
+            invitation.id,
+            "Acme <onboarding@resend.dev>"
+          );
+
           return NextResponse.json({ 
             success: true, 
             message: 'Invitation updated',
@@ -160,6 +204,14 @@ export async function POST(req: NextRequest) {
               status: 'pending',
             },
           });
+          // alert(`Sending invitation email to ${email}`);
+          console.log(`Sending invitation email to ${email}`);
+
+          sendInvitationEmail(
+            email,
+            invitation.id,
+            "Acme <onboarding@resend.dev>"
+          );
 
           return NextResponse.json({ 
             success: true, 

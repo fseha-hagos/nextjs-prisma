@@ -405,7 +405,7 @@ export default function TeamPage() {
                 className="h-10"
               >
                 <option value="member">Member</option>
-                <option value="owner">Owner</option>
+                {/* Only one owner is allowed per organization. Owners invite members as "member". */}
               </Select>
             </div>
             <div className="flex gap-3 pt-6 border-t">
