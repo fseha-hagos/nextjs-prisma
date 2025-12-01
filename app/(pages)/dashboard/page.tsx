@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Sidebar } from '@/components/sidebar';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,19 +8,23 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { MoreVertical, Plus, GripVertical, Edit2, Trash2, Loader2, Building2, RefreshCw } from 'lucide-react';
+import { MoreVertical, Plus, GripVertical, Edit2, Trash2, Loader2, Building2, RefreshCw, ChevronDown, Settings2, User, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useOrganizations } from '@/contexts/OrganizationsContext';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 
 type Outline = {
@@ -35,6 +39,7 @@ type Outline = {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { toast } = useToast();
   const { organizations, selectedOrgId, setSelectedOrgId, loading: orgsLoading, currentUserRole, refreshOrganizations } = useOrganizations();
   const [outlines, setOutlines] = useState<Outline[]>([]);
@@ -58,6 +63,35 @@ export default function DashboardPage() {
   const [createLoading, setCreateLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [user, setUser] = useState<{ name: string; email: string; image?: string } | null>(null);
+  const [activeTab, setActiveTab] = useState('outline');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [visibleColumns, setVisibleColumns] = useState({
+    header: true,
+    sectionType: true,
+    status: true,
+    target: true,
+    limit: true,
+    reviewer: true,
+  });
+
+  // Fetch user data
+  useEffect(() => {
+    fetch('/api/auth/session', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.user) {
+          setUser({
+            name: data.user.name || data.user.email?.split('@')[0] || 'User',
+            email: data.user.email || '',
+            image: data.user.image || undefined,
+          });
+        }
+      })
+      .catch(err => console.error('Failed to fetch user:', err));
+  }, []);
 
   // Refresh organizations when page becomes visible (handles tab switching, etc.)
   useEffect(() => {
@@ -250,6 +284,29 @@ export default function DashboardPage() {
     }
   }
 
+  const toggleRowSelection = (id: string) => {
+    setSelectedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleAllRows = () => {
+    if (selectedRows.size === paginatedOutlines.length) {
+      setSelectedRows(new Set());
+    } else {
+      setSelectedRows(new Set(paginatedOutlines.map(o => o.id)));
+    }
+  };
+
+  const totalPages = Math.ceil(outlines.length / rowsPerPage);
+  const paginatedOutlines = outlines.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
   // Only show full page loading on initial organizations load
   if (orgsLoading) {
     return (
@@ -363,41 +420,170 @@ export default function DashboardPage() {
         currentUserRole={currentUserRole}
       />
       <div className="flex-1 flex flex-col overflow-hidden bg-background">
-        <header className="border-b bg-card/50 backdrop-blur-sm">
-          <div className="flex items-center justify-between px-6 py-4">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Table</h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Manage your outline sections and track progress
-              </p>
+        <header className="border-b bg-card/80 backdrop-blur-md sticky top-0 z-10 shadow-sm">
+          <div className="flex items-center justify-between px-8 py-5">
+            <div className="flex-1 flex items-center gap-8">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="h-11 bg-muted/50 p-1 inline-flex">
+                  <TabsTrigger 
+                    value="outline" 
+                    className="px-6 py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+                  >
+                    Outline
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="past-performance" 
+                    className="px-6 py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all relative"
+                  >
+                    Past Performance
+                    <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs font-semibold">3</Badge>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="key-personnel" 
+                    className="px-6 py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all relative"
+                  >
+                    Key Personnel
+                    <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs font-semibold">2</Badge>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="focus-documents"
+                    className="px-6 py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+                  >
+                    Focus Documents
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <div className="flex items-center gap-3">
+                <Button onClick={() => handleOpenSheet()} className="gap-2 h-10 px-4 shadow-sm">
+                  <Plus className="h-4 w-4" />
+                  Add Section
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="gap-2 h-10 px-4">
+                      <Settings2 className="h-4 w-4" />
+                      Customize Columns
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={(e) => e.preventDefault()}>
+                      <Checkbox
+                        checked={visibleColumns.header}
+                        onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, header: !!checked }))}
+                        className="mr-2"
+                      />
+                      Header
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => e.preventDefault()}>
+                      <Checkbox
+                        checked={visibleColumns.sectionType}
+                        onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, sectionType: !!checked }))}
+                        className="mr-2"
+                      />
+                      Section Type
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => e.preventDefault()}>
+                      <Checkbox
+                        checked={visibleColumns.status}
+                        onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, status: !!checked }))}
+                        className="mr-2"
+                      />
+                      Status
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => e.preventDefault()}>
+                      <Checkbox
+                        checked={visibleColumns.target}
+                        onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, target: !!checked }))}
+                        className="mr-2"
+                      />
+                      Target
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => e.preventDefault()}>
+                      <Checkbox
+                        checked={visibleColumns.limit}
+                        onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, limit: !!checked }))}
+                        className="mr-2"
+                      />
+                      Limit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => e.preventDefault()}>
+                      <Checkbox
+                        checked={visibleColumns.reviewer}
+                        onCheckedChange={(checked) => setVisibleColumns(prev => ({ ...prev, reviewer: !!checked }))}
+                        className="mr-2"
+                      />
+                      Reviewer
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-            <Button onClick={() => handleOpenSheet()} className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Section
-            </Button>
+            <div className="flex items-center gap-4 ml-8">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="gap-3 h-auto py-2.5 px-4 hover:bg-muted/50 rounded-lg transition-colors">
+                    <Avatar className="h-9 w-9 border-2 border-background shadow-sm">
+                      <AvatarImage src={user?.image} alt={user?.name} />
+                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                        {user?.name?.charAt(0).toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col items-start">
+                      <span className="text-sm font-semibold text-foreground">{user?.name || 'User'}</span>
+                      <span className="text-xs text-muted-foreground">{user?.email || ''}</span>
+                    </div>
+                    <ChevronDown className="h-4 w-4 ml-1 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Settings2 className="mr-2 h-4 w-4" />
+                    Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>Logout</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </header>
-        <main className="flex-1 overflow-auto bg-muted/20">
-          <div className="p-6">
-            <div className="rounded-lg border bg-card shadow-sm">
+        <main className="flex-1 overflow-auto bg-gradient-to-b from-background to-muted/20">
+          <div className="p-8">
+            <div className="rounded-xl border bg-card shadow-lg overflow-hidden">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="hover:bg-transparent border-b">
-                      <TableHead className="w-8"></TableHead>
-                      <TableHead className="font-semibold">Header</TableHead>
-                      <TableHead className="font-semibold">Section Type</TableHead>
-                      <TableHead className="font-semibold">Status</TableHead>
-                      <TableHead className="font-semibold">Target</TableHead>
-                      <TableHead className="font-semibold">Limit</TableHead>
-                      <TableHead className="font-semibold">Reviewer</TableHead>
-                      <TableHead className="w-[80px]"></TableHead>
+                    <TableRow className="hover:bg-transparent border-b bg-muted/30">
+                      <TableHead className="w-14 px-6">
+                        <Checkbox
+                          checked={selectedRows.size === paginatedOutlines.length && paginatedOutlines.length > 0}
+                          onCheckedChange={toggleAllRows}
+                          className="border-2"
+                        />
+                      </TableHead>
+                      <TableHead className="w-10 px-4"></TableHead>
+                      {visibleColumns.header && <TableHead className="font-semibold text-sm px-6 py-4">Header</TableHead>}
+                      {visibleColumns.sectionType && <TableHead className="font-semibold text-sm px-6 py-4">Section Type</TableHead>}
+                      {visibleColumns.status && <TableHead className="font-semibold text-sm px-6 py-4">Status</TableHead>}
+                      {visibleColumns.target && <TableHead className="font-semibold text-sm px-6 py-4">Target</TableHead>}
+                      {visibleColumns.limit && <TableHead className="font-semibold text-sm px-6 py-4">Limit</TableHead>}
+                      {visibleColumns.reviewer && <TableHead className="font-semibold text-sm px-6 py-4">Reviewer</TableHead>}
+                      <TableHead className="w-[80px] px-6"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {outlinesLoading ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-12">
+                        <TableCell colSpan={Object.values(visibleColumns).filter(Boolean).length + 3} className="text-center py-12">
                           <div className="flex flex-col items-center gap-3">
                             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                             <p className="text-sm text-muted-foreground">Loading outlines...</p>
@@ -406,7 +592,7 @@ export default function DashboardPage() {
                       </TableRow>
                     ) : outlines.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-12">
+                        <TableCell colSpan={Object.values(visibleColumns).filter(Boolean).length + 3} className="text-center py-12">
                           <div className="flex flex-col items-center gap-3">
                             <div className="rounded-full bg-muted p-3">
                               <Plus className="h-6 w-6 text-muted-foreground" />
@@ -421,39 +607,61 @@ export default function DashboardPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      outlines.map((outline) => (
+                      paginatedOutlines.map((outline) => (
                         <TableRow 
                           key={outline.id}
-                          className="group cursor-pointer hover:bg-muted/50 transition-colors"
+                          className={cn(
+                            "group cursor-pointer hover:bg-muted/40 transition-all duration-200 border-b",
+                            selectedRows.has(outline.id) && "bg-primary/5 hover:bg-primary/10"
+                          )}
                           onClick={() => handleOpenSheet(outline)}
                         >
-                          <TableCell className="w-8">
-                            <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <TableCell className="w-14 px-6" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedRows.has(outline.id)}
+                              onCheckedChange={() => toggleRowSelection(outline.id)}
+                              className="border-2"
+                            />
                           </TableCell>
-                          <TableCell className="font-medium">
-                            {outline.header}
+                          <TableCell className="w-10 px-4">
+                            <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" />
                           </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground">
-                              {formatSectionType(outline.sectionType)}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={getStatusVariant(outline.status)}>
-                              {outline.status.replace(/_/g, ' ')}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm">{outline.target ?? '-'}</span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm">{outline.limit ?? '-'}</span>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-sm text-muted-foreground">
-                              {outline.reviewer}
-                            </span>
-                          </TableCell>
+                          {visibleColumns.header && (
+                            <TableCell className="font-medium px-6 py-4">
+                              <span className="text-sm">{outline.header}</span>
+                            </TableCell>
+                          )}
+                          {visibleColumns.sectionType && (
+                            <TableCell className="px-6 py-4">
+                              <Badge variant="outline" className="text-xs font-normal">
+                                {formatSectionType(outline.sectionType)}
+                              </Badge>
+                            </TableCell>
+                          )}
+                          {visibleColumns.status && (
+                            <TableCell className="px-6 py-4">
+                              <Badge variant={getStatusVariant(outline.status)} className="text-xs">
+                                {outline.status.replace(/_/g, ' ')}
+                              </Badge>
+                            </TableCell>
+                          )}
+                          {visibleColumns.target && (
+                            <TableCell className="px-6 py-4">
+                              <span className="text-sm font-medium">{outline.target ?? '-'}</span>
+                            </TableCell>
+                          )}
+                          {visibleColumns.limit && (
+                            <TableCell className="px-6 py-4">
+                              <span className="text-sm font-medium">{outline.limit ?? '-'}</span>
+                            </TableCell>
+                          )}
+                          {visibleColumns.reviewer && (
+                            <TableCell className="px-6 py-4">
+                              <span className="text-sm text-muted-foreground">
+                                {outline.reviewer}
+                              </span>
+                            </TableCell>
+                          )}
                           <TableCell onClick={(e) => e.stopPropagation()}>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -499,6 +707,77 @@ export default function DashboardPage() {
                     )}
                   </TableBody>
                 </Table>
+              </div>
+              {/* Bottom Navigation */}
+              <div className="flex items-center justify-between border-t px-6 py-4 bg-muted/40 backdrop-blur-sm">
+                <div className="text-sm font-medium text-foreground">
+                  {selectedRows.size > 0 ? (
+                    <span className="text-primary">{selectedRows.size} of {outlines.length} row(s) selected.</span>
+                  ) : (
+                    <span className="text-muted-foreground">{outlines.length} row(s) total</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-6">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground font-medium">Rows per page</span>
+                    <Select
+                      value={rowsPerPage.toString()}
+                      onChange={(e) => {
+                        setRowsPerPage(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="h-9 w-[80px] border-2"
+                    >
+                      <option value="10">10</option>
+                      <option value="25">25</option>
+                      <option value="50">50</option>
+                      <option value="100">100</option>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground font-medium min-w-[100px] text-right">
+                      Page {currentPage} of {totalPages || 1}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 border-2"
+                        onClick={() => setCurrentPage(1)}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronsLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 border-2"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 border-2"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage >= totalPages}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-9 w-9 border-2"
+                        onClick={() => setCurrentPage(totalPages)}
+                        disabled={currentPage >= totalPages}
+                      >
+                        <ChevronsRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
