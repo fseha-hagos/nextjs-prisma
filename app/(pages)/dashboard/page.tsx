@@ -8,12 +8,13 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { MoreVertical, Plus, GripVertical, Edit2, Trash2, Loader2, Building2 } from 'lucide-react';
+import { MoreVertical, Plus, GripVertical, Edit2, Trash2, Loader2, Building2, RefreshCw } from 'lucide-react';
 import { useOrganizations } from '@/contexts/OrganizationsContext';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { AlertDialog } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,32 +53,26 @@ export default function DashboardPage() {
     target: '',
     limit: '',
   });
+  const [orgName, setOrgName] = useState('');
+  const [createError, setCreateError] = useState('');
+  const [createLoading, setCreateLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Refresh organizations when page becomes visible (handles tab switching, etc.)
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        refreshOrganizations();
+    const handleVisibilityChange = (): void => {
+      if (document.visibilityState === 'visible' && organizations.length > 0) {
+        refreshOrganizations().catch(err => {
+          console.error('Failed to refresh organizations on visibility change:', err);
+        });
       }
     };
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [refreshOrganizations]);
+  }, [refreshOrganizations, organizations.length]);
 
-  // Refresh organizations when dashboard mounts or when organizations are empty
-  // This ensures organizations are loaded after login
-  useEffect(() => {
-    // If we have no organizations but we're not loading, try to refresh
-    // This handles the case where user logs in and context hasn't loaded yet
-    if (organizations.length === 0 && !orgsLoading) {
-      // Small delay to ensure session is available
-      const timer = setTimeout(() => {
-        refreshOrganizations();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [organizations.length, orgsLoading, refreshOrganizations]);
 
   useEffect(() => {
     if (selectedOrgId && !orgsLoading) {
@@ -184,6 +179,22 @@ export default function DashboardPage() {
     setDeleteDialogOpen(true);
   }
 
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      await refreshOrganizations();
+      router.refresh();
+      router.push('/dashboard');
+    } catch (err) {
+      console.error('Failed to refresh:', err);
+      // Still navigate to dashboard even if refresh fails
+      router.push('/dashboard');
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+
   async function handleDelete() {
     if (!outlineToDelete) return;
     setDeleteDialogOpen(false);
@@ -253,31 +264,91 @@ export default function DashboardPage() {
     );
   }
 
-  // Show empty state only if not loading and organizations array is empty
+  // Render create organization form if user has no organizations
   if (!orgsLoading && organizations.length === 0) {
+    async function handleCreateOrg(e: React.FormEvent<HTMLFormElement>) {
+      e.preventDefault();
+      setCreateError('');
+      setCreateLoading(true);
+      
+      try {
+        const r = await fetch('/api/organizations', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ name: orgName })
+        });
+        
+        if (r.ok) {
+          const data = await r.json();
+          // Refresh organizations in context to include the new one
+          try {
+            await refreshOrganizations();
+          } catch (refreshError) {
+            console.error('Failed to refresh organizations after creation:', refreshError);
+          }
+          router.refresh();
+          router.push(`/dashboard?orgId=${data.id}`);
+        } else {
+          const data = await r.json();
+          setCreateError(data.error || 'Failed to create organization');
+        }
+      } catch (err) {
+        setCreateError('An error occurred. Please try again.');
+      } finally {
+        setCreateLoading(false);
+      }
+    }
+
     return (
       <div className="flex h-screen bg-background">
-        <div className="flex-1 flex items-center justify-center p-6">
-          <div className="text-center max-w-md space-y-4">
-            <div className="rounded-full bg-muted p-6 w-20 h-20 mx-auto flex items-center justify-center">
-              <Building2 className="h-10 w-10 text-muted-foreground" />
-            </div>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-semibold">No organizations yet</h2>
-              <p className="text-muted-foreground">
-                Get started by creating your first organization or joining an existing one.
-              </p>
-            </div>
-            <div className="flex gap-3 justify-center pt-2">
-              <Button onClick={() => router.push('/organization/create')} size="lg">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Organization
-              </Button>
-              <Button onClick={() => router.push('/organization/join')} variant="outline" size="lg">
-                Join Organization
-              </Button>
-            </div>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Create Organization</CardTitle>
+              <CardDescription>
+                Create a new organization to get started
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleCreateOrg} className="space-y-4">
+                {createError && (
+                  <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md border border-destructive/20">
+                    {createError}
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label htmlFor="orgName">Organization Name</Label>
+                  <Input
+                    id="orgName"
+                    name="orgName"
+                    type="text"
+                    required
+                    value={orgName}
+                    onChange={(e) => setOrgName(e.target.value)}
+                    placeholder="Enter organization name"
+                    disabled={createLoading}
+                  />
+                </div>
+                <div className="flex gap-4">
+                  <Button type="submit" disabled={createLoading} className="flex-1">
+                    {createLoading ? 'Creating...' : 'Create Organization'}
+                  </Button>
+                </div>
+                <div className="mt-4 pt-4 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={refreshing || loading}
+              className="w-full gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Go to Dashboard'}
+            </Button>
           </div>
+              </form>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
