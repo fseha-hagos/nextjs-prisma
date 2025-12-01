@@ -1,6 +1,6 @@
 'use client';
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 
 type Organization = {
   id: string;
@@ -13,6 +13,7 @@ interface OrganizationsContextType {
   setSelectedOrgId: (id: string) => void;
   loading: boolean;
   refreshOrganizations: () => Promise<void>;
+  resetContext: () => void;
   currentUserRole: string;
   setCurrentUserRole: (role: string) => void;
 }
@@ -21,11 +22,21 @@ const OrganizationsContext = createContext<OrganizationsContextType | undefined>
 
 export function OrganizationsProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrgId, setSelectedOrgId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [currentUserRole, setCurrentUserRole] = useState<string>('member');
   const [initialized, setInitialized] = useState(false);
+  const isUserInitiatedChange = useRef(false);
+
+  const resetContext = useCallback(() => {
+    setOrganizations([]);
+    setSelectedOrgId('');
+    setCurrentUserRole('member');
+    setInitialized(false);
+    setLoading(true);
+  }, []);
 
   const refreshOrganizations = useCallback(async () => {
     try {
@@ -33,11 +44,35 @@ export function OrganizationsProvider({ children }: { children: ReactNode }) {
       const sessionRes = await fetch('/api/auth/session', {
         credentials: 'include',
       });
+      
+      if (!sessionRes.ok) {
+        console.error('Failed to fetch session:', sessionRes.status);
+        // Only reset if we're not already on a public route
+        if (typeof window !== 'undefined') {
+          const pathname = window.location.pathname;
+          if (pathname !== '/login' && pathname !== '/signup') {
+            resetContext();
+          }
+        } else {
+          resetContext();
+        }
+        return;
+      }
+      
       const sessionData = await sessionRes.json();
       
       if (!sessionData.user) {
-        router.push('/login');
-        setLoading(false);
+        // Only reset and redirect if we're not already on a public route
+        if (typeof window !== 'undefined') {
+          const pathname = window.location.pathname;
+          if (pathname !== '/login' && pathname !== '/signup') {
+            resetContext();
+            router.push('/login');
+          }
+        } else {
+          resetContext();
+          router.push('/login');
+        }
         return;
       }
 
@@ -46,17 +81,30 @@ export function OrganizationsProvider({ children }: { children: ReactNode }) {
       });
 
       if (orgRes.status === 401) {
-        router.push('/login');
-        setLoading(false);
+        // Only reset and redirect if we're not already on a public route
+        if (typeof window !== 'undefined') {
+          const pathname = window.location.pathname;
+          if (pathname !== '/login' && pathname !== '/signup') {
+            resetContext();
+            router.push('/login');
+          }
+        } else {
+          resetContext();
+          router.push('/login');
+        }
         return;
       }
 
       if (!orgRes.ok) {
         const errorData = await orgRes.json().catch(() => ({}));
         console.error('Failed to fetch organizations:', orgRes.status, orgRes.statusText, errorData);
-        setOrganizations([]);
+        // Don't clear organizations on error - keep existing state
+        // Only clear if it's a 403 (forbidden) or 404 (not found)
+        if (orgRes.status === 403 || orgRes.status === 404) {
+          setOrganizations([]);
+        }
         setLoading(false);
-        return;
+        throw new Error(errorData.error || `Failed to fetch organizations: ${orgRes.statusText}`);
       }
 
       const data = await orgRes.json();
@@ -68,15 +116,16 @@ export function OrganizationsProvider({ children }: { children: ReactNode }) {
       // Check if response is an error object
       if (data && data.error) {
         console.error('API returned error:', data.error);
-        setOrganizations([]);
+        // Don't clear organizations on error - keep existing state
         setLoading(false);
-        return;
+        throw new Error(data.error);
       }
       
       if (data && Array.isArray(data)) {
         console.log('Setting organizations:', data.length, 'organizations');
         // Always update organizations state, even if empty
         // Use a new array reference to ensure React detects the change
+        // Only set organizations if we have a valid session
         setOrganizations([...data]);
         
         // Use functional update to check current selectedOrgId
@@ -106,18 +155,24 @@ export function OrganizationsProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     } catch (err) {
       console.error('Failed to fetch organizations:', err);
-      setOrganizations([]);
+      // Don't clear organizations on network errors - keep existing state
       setLoading(false);
-      // Don't redirect to login on network errors, just show empty state
-      if (err instanceof Error && err.message.includes('fetch')) {
-        return;
-      }
-      router.push('/login');
+      // Re-throw the error so callers can handle it
+      throw err;
     }
-  }, [router]);
+  }, [router, resetContext]);
 
   useEffect(() => {
     if (!initialized) {
+      // Don't refresh on public routes (login, signup)
+      if (typeof window !== 'undefined') {
+        const pathname = window.location.pathname;
+        if (pathname === '/login' || pathname === '/signup') {
+          setLoading(false);
+          setInitialized(true);
+          return;
+        }
+      }
       refreshOrganizations().finally(() => {
         setLoading(false);
         setInitialized(true);
@@ -125,47 +180,74 @@ export function OrganizationsProvider({ children }: { children: ReactNode }) {
     }
   }, [initialized, refreshOrganizations]);
 
-  // Force refresh if we have a session but no organizations (handles login case)
-  // This runs once after initialization if organizations are still empty
+  // Reset context when session changes (handles logout)
+  // Only check on visibility change and only if we're on a protected route
   useEffect(() => {
-    if (initialized && organizations.length === 0 && !loading) {
-      // Small delay to ensure session cookies are set after login
-      const timer = setTimeout(() => {
-        // Check if we have a valid session
-        fetch('/api/auth/session', { credentials: 'include' })
-          .then(res => res.json())
-          .then(data => {
-            // If we have a session but no organizations, refresh
-            if (data.user) {
-              console.log('Session detected but no organizations, refreshing...');
-              refreshOrganizations();
-            }
-          })
-          .catch(() => {
-            // Ignore errors
-          });
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [initialized]); // Only depend on initialized to avoid loops
+    const checkSession = async () => {
+      // Don't check session on public routes (login, signup)
+      if (typeof window !== 'undefined') {
+        const pathname = window.location.pathname;
+        if (pathname === '/login' || pathname === '/signup') {
+          return;
+        }
+      }
 
-  // Sync selectedOrgId with URL
+      try {
+        const sessionRes = await fetch('/api/auth/session', {
+          credentials: 'include',
+        });
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json();
+          if (!sessionData.user && initialized) {
+            // Session expired or user logged out - reset only once
+            resetContext();
+          }
+        }
+      } catch (err) {
+        // Ignore errors during session check
+      }
+    };
+
+    // Only check on visibility change, not periodically
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && initialized) {
+        checkSession();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [initialized, resetContext]);
+
+  // Only refresh once on initialization - don't keep refreshing if user has no organizations
+  // This prevents unnecessary API calls when user legitimately has 0 organizations
+
+  // Sync selectedOrgId with URL (only when URL changes externally, not on user-initiated changes)
   useEffect(() => {
     if (typeof window !== 'undefined' && initialized && organizations.length > 0) {
       const urlParams = new URLSearchParams(window.location.search);
       const orgIdFromUrl = urlParams.get('orgId');
       
+      // Skip if this is a user-initiated change (we just updated the URL)
+      if (isUserInitiatedChange.current) {
+        isUserInitiatedChange.current = false;
+        return;
+      }
+      
       if (orgIdFromUrl && organizations.find((o: Organization) => o.id === orgIdFromUrl)) {
+        // Only update state if URL has a different orgId than current state
+        // This handles browser back/forward navigation
         if (selectedOrgId !== orgIdFromUrl) {
           setSelectedOrgId(orgIdFromUrl);
         }
       } else if (!orgIdFromUrl && selectedOrgId && organizations.length > 0) {
         // If no orgId in URL but we have a selected one, update URL
-        const currentPath = window.location.pathname;
-        router.replace(`${currentPath}?orgId=${selectedOrgId}`, { scroll: false });
+        router.replace(`${pathname}?orgId=${selectedOrgId}`, { scroll: false });
       }
     }
-  }, [organizations, initialized, selectedOrgId, router]);
+  }, [organizations, initialized, router, pathname, selectedOrgId]);
 
   // Fetch user role when selectedOrgId changes
   useEffect(() => {
@@ -182,12 +264,13 @@ export function OrganizationsProvider({ children }: { children: ReactNode }) {
   }, [selectedOrgId, initialized]);
 
   const handleSetSelectedOrgId = useCallback((id: string) => {
+    // Mark this as a user-initiated change to prevent URL sync from interfering
+    isUserInitiatedChange.current = true;
+    // Update state first
     setSelectedOrgId(id);
-    if (typeof window !== 'undefined') {
-      const currentPath = window.location.pathname;
-      router.push(`${currentPath}?orgId=${id}`, { scroll: false });
-    }
-  }, [router]);
+    // Then update URL
+    router.replace(`${pathname}?orgId=${id}`, { scroll: false });
+  }, [router, pathname]);
 
   return (
     <OrganizationsContext.Provider
@@ -197,6 +280,7 @@ export function OrganizationsProvider({ children }: { children: ReactNode }) {
         setSelectedOrgId: handleSetSelectedOrgId,
         loading,
         refreshOrganizations,
+        resetContext,
         currentUserRole,
         setCurrentUserRole,
       }}
