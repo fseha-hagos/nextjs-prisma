@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useOrganizations } from '@/contexts/OrganizationsContext';
+import { RefreshCw, LayoutDashboard } from 'lucide-react';
 
 export default function CreateOrg() {
   const router = useRouter();
@@ -13,6 +14,22 @@ export default function CreateOrg() {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    try {
+      await refreshOrganizations();
+      router.refresh();
+      router.push('/dashboard');
+    } catch (err) {
+      console.error('Failed to refresh:', err);
+      // Still navigate to dashboard even if refresh fails
+      router.push('/dashboard');
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -29,7 +46,13 @@ export default function CreateOrg() {
       if (r.ok) {
         const data = await r.json();
         // Refresh organizations in context to include the new one
-        await refreshOrganizations();
+        try {
+          await refreshOrganizations();
+        } catch (refreshError) {
+          console.error('Failed to refresh organizations after creation:', refreshError);
+          // Continue anyway - the organization was created successfully
+          // The context will refresh on next page load
+        }
         // Use router.refresh() to force Next.js to refresh the page data
         router.refresh();
         // Redirect to dashboard with the new organization ID
@@ -88,6 +111,18 @@ export default function CreateOrg() {
               </Button>
             </div>
           </form>
+          <div className="mt-4 pt-4 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleRefresh}
+              disabled={refreshing || loading}
+              className="w-full gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh & Go to Dashboard'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
