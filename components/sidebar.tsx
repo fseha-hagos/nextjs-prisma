@@ -14,6 +14,7 @@ import {
   Check
 } from 'lucide-react';
 import { useState } from 'react';
+import { useOrganizations } from '@/contexts/OrganizationsContext';
 
 interface SidebarProps {
   organizations: Array<{ id: string; name: string }>;
@@ -26,9 +27,14 @@ export function Sidebar({ organizations, selectedOrgId, onOrgChange, currentUser
   const pathname = usePathname();
   const router = useRouter();
   const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
+  const { resetContext } = useOrganizations();
 
   const handleSignOut = async () => {
+    // Reset context immediately to clear all state
+    resetContext();
+    // Sign out from server
     await fetch('/api/auth/sign-out', { method: 'POST' });
+    // Redirect to login
     router.push('/login');
   };
 
