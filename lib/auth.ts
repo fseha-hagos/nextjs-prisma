@@ -13,21 +13,34 @@ export const auth = betterAuth({
         enabled: true,
         requireEmailVerification: true,
         sendVerificationEmail: async ({ user, url }: { user: { email: string, name?: string }, url: string }) => {
-            const { sendVerificationEmail } = await import("./email");
-            // Better-auth provides the full verification URL
-            // Extract token from URL to create a callback to our verification page
+            console.log('🔐 Better-auth requesting email verification email');
+            console.log('   User:', user.email, user.name);
+            console.log('   URL:', url);
+            
             try {
-                const urlObj = new URL(url);
-                const token = urlObj.searchParams.get('token');
-                // Create a callback URL that points to our verification page
-                const baseUrl = process.env.NEXT_PUBLIC_APP_URL || urlObj.origin;
-                const callbackUrl = token 
-                    ? `${baseUrl}/verify-email?token=${token}`
-                    : url;
-                await sendVerificationEmail(user.email, callbackUrl, user.name);
-            } catch (error) {
-                // If URL parsing fails, use the original URL
-                await sendVerificationEmail(user.email, url, user.name);
+                const { sendVerificationEmail } = await import("./email");
+                // Better-auth provides the full verification URL
+                // Extract token from URL to create a callback to our verification page
+                try {
+                    const urlObj = new URL(url);
+                    const token = urlObj.searchParams.get('token');
+                    // Create a callback URL that points to our verification page
+                    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || urlObj.origin;
+                    const callbackUrl = token 
+                        ? `${baseUrl}/verify-email?token=${token}`
+                        : url;
+                    console.log('   Using callback URL:', callbackUrl);
+                    await sendVerificationEmail(user.email, callbackUrl, user.name);
+                } catch (urlError) {
+                    console.warn('   URL parsing failed, using original URL:', urlError);
+                    // If URL parsing fails, use the original URL
+                    await sendVerificationEmail(user.email, url, user.name);
+                }
+            } catch (error: any) {
+                console.error('❌ Error in sendVerificationEmail callback:', error);
+                console.error('   This will prevent email verification from working!');
+                // Don't throw - better-auth will handle the error
+                throw error;
             }
         },
     },
