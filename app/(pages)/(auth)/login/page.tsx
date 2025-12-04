@@ -16,6 +16,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   
   const redirectTo = searchParams.get('redirect') || '/dashboard';
+  const verified = searchParams.get('verified');
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -38,7 +39,12 @@ function LoginForm() {
         router.push(redirectTo);
       } else {
         const data = await resp.json().catch(() => ({}));
-        setError(data.message || data.error || 'Login failed. Please check your credentials.');
+        // If verification is required, show a helpful message
+        if (data.requiresVerification) {
+          setError(data.error || 'Please verify your email address before signing in. Check your inbox (and spam folder) for the verification link.');
+        } else {
+          setError(data.message || data.error || 'Login failed. Please check your credentials.');
+        }
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
@@ -58,6 +64,17 @@ function LoginForm() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {verified === 'false' && (
+              <div className="bg-blue-500/15 text-blue-700 dark:text-blue-400 text-sm p-3 rounded-md border border-blue-500/20">
+                <p className="font-semibold mb-1">📧 Verification Email Sent</p>
+                <p>Please check your email inbox (and spam folder) for the verification link. You need to verify your email before signing in.</p>
+              </div>
+            )}
+            {verified === 'true' && (
+              <div className="bg-green-500/15 text-green-700 dark:text-green-400 text-sm p-3 rounded-md border border-green-500/20">
+                ✓ Email verified successfully! You can now sign in.
+              </div>
+            )}
             {error && (
               <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md border border-destructive/20">
                 {error}

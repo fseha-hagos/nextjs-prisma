@@ -14,11 +14,13 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError('');
+    setSuccess('');
     
     if (password !== confirmPassword) {
       setError('Passwords do not match');
@@ -44,21 +46,35 @@ export default function SignupPage() {
       });
       
       if (resp.ok) {
-        // Use Better Auth's built-in endpoint directly
-        const signInResp = await fetch('/api/auth/sign-in/email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ email, password })
-        });
+        const data = await resp.json().catch(() => ({}));
         
-        if (signInResp.ok) {
-          // Wait a moment for cookies to be set before redirecting
-          await new Promise(resolve => setTimeout(resolve, 100));
-          router.push('/dashboard');
+        // Check if email verification is required
+        if (data.requiresVerification || data.message?.includes('verify')) {
+          // Show success message about email verification
+          setError('');
+          setSuccess('Account created successfully! Please check your email inbox (and spam folder) for a verification link. You\'ll need to verify your email before you can sign in.');
+          // Clear form
+          setName('');
+          setEmail('');
+          setPassword('');
+          setConfirmPassword('');
+          // Don't redirect - let user read the message and check their email
         } else {
-          const signInData = await signInResp.json().catch(() => ({}));
-          setError(signInData.error || signInData.message || 'Account created but sign-in failed. Please try logging in.');
+          // If verification is not required (shouldn't happen with our config), proceed with sign-in
+          const signInResp = await fetch('/api/auth/sign-in/email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ email, password })
+          });
+          
+          if (signInResp.ok) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            router.push('/dashboard');
+          } else {
+            const signInData = await signInResp.json().catch(() => ({}));
+            setError(signInData.error || signInData.message || 'Account created but sign-in failed. Please try logging in.');
+          }
         }
       } else {
         const data = await resp.json().catch(() => ({}));
@@ -82,6 +98,21 @@ export default function SignupPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {success && (
+              <div className="bg-green-500/15 text-green-700 dark:text-green-400 text-sm p-3 rounded-md border border-green-500/20 space-y-2">
+                <p className="font-semibold">✓ Account Created Successfully!</p>
+                <p>{success}</p>
+                <div className="mt-3 pt-3 border-t border-green-500/20">
+                  <p className="text-xs text-green-600 dark:text-green-500">
+                    After verifying your email, you can{' '}
+                    <Link href="/login" className="underline font-semibold">
+                      sign in here
+                    </Link>
+                    .
+                  </p>
+                </div>
+              </div>
+            )}
             {error && (
               <div className="bg-destructive/15 text-destructive text-sm p-3 rounded-md border border-destructive/20">
                 {error}
@@ -134,8 +165,8 @@ export default function SignupPage() {
                 disabled={loading}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Creating account...' : 'Sign up'}
+            <Button type="submit" className="w-full" disabled={loading || !!success}>
+              {loading ? 'Creating account...' : success ? 'Check Your Email' : 'Sign up'}
             </Button>
             <div className="text-center text-sm text-muted-foreground">
               Already have an account?{' '}
