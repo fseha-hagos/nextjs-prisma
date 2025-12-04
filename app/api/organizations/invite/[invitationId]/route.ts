@@ -6,7 +6,7 @@ import prisma from '@/lib/db';
 // GET - Get invitation details
 export async function GET(
   req: NextRequest,
-  { params }: { params: { invitationId: string } }
+  { params }: { params: Promise<{ invitationId: string }> }
 ) {
   try {
     const session = await auth.api.getSession({ headers: req.headers });
@@ -18,7 +18,7 @@ export async function GET(
       );
     }
 
-    const invitationId = params.invitationId;
+    const { invitationId } = await params;
 
     if (!invitationId) {
       return NextResponse.json(
