@@ -24,10 +24,12 @@ export async function POST(req: NextRequest) {
       headers: req.headers,
     });
 
-    // Return success response with user data
+    // Return success response - email verification will be sent automatically by better-auth
     return NextResponse.json({ 
       success: true,
-      user: result.user 
+      message: 'Account created successfully. Please check your email to verify your account.',
+      user: result.user,
+      requiresVerification: true
     });
   } catch (error: any) {
     console.error('Sign-up error:', error);

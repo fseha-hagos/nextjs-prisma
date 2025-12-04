@@ -179,13 +179,19 @@ export async function POST(req: NextRequest) {
             },
           });
 
-          // alert(`Sending invitation email to ${email}`);
+          // Get inviter's information
+          const inviter = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { name: true, email: true },
+          });
+
           console.log(`Sending invitation email to ${email}`);
 
           sendInvitationEmail(
             email,
             invitation.id,
-            "Acme <onboarding@resend.dev>"
+            inviter?.name || session.user.name || undefined,
+            inviter?.email || session.user.email || undefined
           );
 
           return NextResponse.json({ 
@@ -204,13 +210,20 @@ export async function POST(req: NextRequest) {
               status: 'pending',
             },
           });
-          // alert(`Sending invitation email to ${email}`);
+          
+          // Get inviter's information
+          const inviter = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { name: true, email: true },
+          });
+
           console.log(`Sending invitation email to ${email}`);
 
           sendInvitationEmail(
             email,
             invitation.id,
-            "Acme <onboarding@resend.dev>"
+            inviter?.name || session.user.name || undefined,
+            inviter?.email || session.user.email || undefined
           );
 
           return NextResponse.json({ 

@@ -8,13 +8,42 @@ export async function POST(req: NextRequest) {
     const { email, password } = body;
 
     // Use Better Auth's API method
-    const result = await auth.api.signInEmail({
-      body: {
-        email,
-        password,
-      },
-      headers: req.headers,
-    });
+    let result;
+    try {
+      result = await auth.api.signInEmail({
+        body: {
+          email,
+          password,
+        },
+        headers: req.headers,
+      });
+    } catch (authError: any) {
+      // Better-auth might throw an error for unverified users
+      // Check if it's an email verification error
+      if (authError.message?.toLowerCase().includes('verify') || 
+          authError.message?.toLowerCase().includes('email') ||
+          authError.message?.toLowerCase().includes('unverified')) {
+        return NextResponse.json(
+          { 
+            error: 'Please verify your email address before signing in. Check your inbox (and spam folder) for the verification link.',
+            requiresVerification: true
+          },
+          { status: 403 }
+        );
+      }
+      throw authError;
+    }
+
+    // Check if email is verified
+    if (result.user && !result.user.emailVerified) {
+      return NextResponse.json(
+        { 
+          error: 'Please verify your email address before signing in. Check your inbox (and spam folder) for the verification link.',
+          requiresVerification: true
+        },
+        { status: 403 }
+      );
+    }
 
     // Create response with user data
     const response = NextResponse.json({ 
