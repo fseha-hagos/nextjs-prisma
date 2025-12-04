@@ -17,8 +17,20 @@ export const resend = new Resend(RESEND_API_KEY);
 const getFromEmail = () => {
   if (!RESEND_FROM_EMAIL) {
     console.error('❌ RESEND_FROM_EMAIL is missing! Emails cannot be sent.');
+    console.error('   For testing, you can use: onboarding@resend.dev');
+    console.error('   For production, verify your domain at https://resend.com/domains');
     throw new Error('RESEND_FROM_EMAIL environment variable is not configured');
   }
+  
+  // Extract domain from email to validate
+  const emailMatch = RESEND_FROM_EMAIL.match(/<(.+)>/);
+  const emailAddress = emailMatch ? emailMatch[1] : RESEND_FROM_EMAIL;
+  const domain = emailAddress.split('@')[1];
+  
+  console.log(`📧 Using from email: ${RESEND_FROM_EMAIL}`);
+  console.log(`   Domain: ${domain}`);
+  console.log(`   Make sure this domain is verified in Resend: https://resend.com/domains`);
+  
   return RESEND_FROM_EMAIL;
 };
 
@@ -73,6 +85,19 @@ export const sendInvitationEmail = async (
       `,
     });
 
+    if (result.error) {
+      console.error('❌ Resend API returned an error:', result.error);
+      if (result.error.message?.includes('not verified')) {
+        console.error('   ⚠️  DOMAIN VERIFICATION ISSUE:');
+        console.error('   Your domain is not verified in Resend.');
+        console.error('   Options:');
+        console.error('   1. For testing: Use onboarding@resend.dev (already verified)');
+        console.error('   2. For production: Verify your domain at https://resend.com/domains');
+        console.error('   3. Check your RESEND_FROM_EMAIL environment variable');
+      }
+      throw new Error(result.error.message || 'Failed to send email');
+    }
+
     console.log(`✅ Invitation email sent successfully!`, result);
     return result;
   } catch (error: any) {
@@ -80,8 +105,16 @@ export const sendInvitationEmail = async (
     console.error('   Error details:', {
       message: error.message,
       name: error.name,
-      stack: error.stack,
     });
+    
+    // Provide helpful error message for domain verification issues
+    if (error.message?.includes('not verified') || error.message?.includes('domain')) {
+      console.error('\n   💡 SOLUTION:');
+      console.error('   1. Go to https://resend.com/domains');
+      console.error('   2. Add and verify your domain, OR');
+      console.error('   3. For testing, set RESEND_FROM_EMAIL=onboarding@resend.dev');
+    }
+    
     throw error;
   }
 };
@@ -116,6 +149,19 @@ export const sendVerificationEmail = async (to: string, verificationUrl: string,
       `,
     });
 
+    if (result.error) {
+      console.error('❌ Resend API returned an error:', result.error);
+      if (result.error.message?.includes('not verified')) {
+        console.error('   ⚠️  DOMAIN VERIFICATION ISSUE:');
+        console.error('   Your domain is not verified in Resend.');
+        console.error('   Options:');
+        console.error('   1. For testing: Use onboarding@resend.dev (already verified)');
+        console.error('   2. For production: Verify your domain at https://resend.com/domains');
+        console.error('   3. Check your RESEND_FROM_EMAIL environment variable');
+      }
+      throw new Error(result.error.message || 'Failed to send email');
+    }
+
     console.log(`✅ Verification email sent successfully!`, result);
     return result;
   } catch (error: any) {
@@ -123,8 +169,16 @@ export const sendVerificationEmail = async (to: string, verificationUrl: string,
     console.error('   Error details:', {
       message: error.message,
       name: error.name,
-      stack: error.stack,
     });
+    
+    // Provide helpful error message for domain verification issues
+    if (error.message?.includes('not verified') || error.message?.includes('domain')) {
+      console.error('\n   💡 SOLUTION:');
+      console.error('   1. Go to https://resend.com/domains');
+      console.error('   2. Add and verify your domain, OR');
+      console.error('   3. For testing, set RESEND_FROM_EMAIL=onboarding@resend.dev');
+    }
+    
     throw error;
   }
 };
