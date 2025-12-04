@@ -117,12 +117,21 @@ export default function TeamPage() {
             title: 'Already a Member',
             description: `${invitedEmail} is already a member of this organization`,
           });
-        } else if (data.message === 'Invitation created' || data.message === 'Invitation updated') {
-          toast({
-            variant: 'success',
-            title: 'Invitation Sent ✓',
-            description: `Invitation sent to ${invitedEmail}. They will receive an email to join the organization.`,
-          });
+        } else if (data.message?.includes('Invitation created') || data.message?.includes('Invitation updated')) {
+          // Check if email was actually sent
+          if (data.emailSent === false) {
+            toast({
+              variant: 'destructive',
+              title: 'Invitation Created but Email Failed',
+              description: `Invitation was created but email failed to send: ${data.emailError || 'Unknown error'}. You can share the invitation link manually.`,
+            });
+          } else {
+            toast({
+              variant: 'success',
+              title: 'Invitation Sent ✓',
+              description: `Invitation sent to ${invitedEmail}. They will receive an email to join the organization.`,
+            });
+          }
         } else {
           toast({
             variant: 'success',
