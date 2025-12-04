@@ -187,12 +187,18 @@ export async function POST(req: NextRequest) {
 
           console.log(`Sending invitation email to ${email}`);
 
-          sendInvitationEmail(
-            email,
-            invitation.id,
-            inviter?.name || session.user.name || undefined,
-            inviter?.email || session.user.email || undefined
-          );
+          // Send invitation email (don't fail if email fails)
+          try {
+            await sendInvitationEmail(
+              email,
+              invitation.id,
+              inviter?.name || session.user.name || undefined,
+              inviter?.email || session.user.email || undefined
+            );
+          } catch (emailError: any) {
+            console.error('⚠️ Failed to send invitation email, but invitation was created:', emailError);
+            // Continue - invitation is still created in database
+          }
 
           return NextResponse.json({ 
             success: true, 
@@ -219,12 +225,18 @@ export async function POST(req: NextRequest) {
 
           console.log(`Sending invitation email to ${email}`);
 
-          sendInvitationEmail(
-            email,
-            invitation.id,
-            inviter?.name || session.user.name || undefined,
-            inviter?.email || session.user.email || undefined
-          );
+          // Send invitation email (don't fail if email fails)
+          try {
+            await sendInvitationEmail(
+              email,
+              invitation.id,
+              inviter?.name || session.user.name || undefined,
+              inviter?.email || session.user.email || undefined
+            );
+          } catch (emailError: any) {
+            console.error('⚠️ Failed to send invitation email, but invitation was created:', emailError);
+            // Continue - invitation is still created in database
+          }
 
           return NextResponse.json({ 
             success: true, 
