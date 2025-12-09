@@ -41,7 +41,7 @@ export function Sidebar({ organizations, selectedOrgId, onOrgChange, currentUser
   const selectedOrg = organizations.find(org => org.id === selectedOrgId);
 
   return (
-    <div className="flex h-screen w-72 flex-col border-r bg-gradient-to-b from-sidebar to-sidebar/95 backdrop-blur-sm">
+    <div className="flex h-full w-full flex-col border-r bg-gradient-to-b from-sidebar to-sidebar/95 backdrop-blur-sm">
       <div className="flex h-16 items-center border-b border-sidebar-border px-6 bg-sidebar/50">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">

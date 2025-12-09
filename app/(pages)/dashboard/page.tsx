@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { MoreVertical, Plus, GripVertical, Edit2, Trash2, Loader2, Building2, RefreshCw, ChevronDown, Settings2, User, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { MoreVertical, Plus, GripVertical, Edit2, Trash2, Loader2, Building2, RefreshCw, ChevronDown, Settings2, User, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Menu } from 'lucide-react';
 import { useOrganizations } from '@/contexts/OrganizationsContext';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
@@ -76,6 +76,7 @@ export default function DashboardPage() {
     limit: true,
     reviewer: true,
   });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Fetch user data
   useEffect(() => {
@@ -413,57 +414,119 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-screen">
-      <Sidebar
-        organizations={organizations}
-        selectedOrgId={selectedOrgId}
-        onOrgChange={setSelectedOrgId}
-        currentUserRole={currentUserRole}
-      />
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block">
+        <Sidebar
+          organizations={organizations}
+          selectedOrgId={selectedOrgId}
+          onOrgChange={setSelectedOrgId}
+          currentUserRole={currentUserRole}
+        />
+      </div>
+      
+      {/* Mobile Sidebar Sheet */}
+      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <SheetContent side="left" className="w-72 p-0">
+          <Sidebar
+            organizations={organizations}
+            selectedOrgId={selectedOrgId}
+            onOrgChange={(orgId) => {
+              setSelectedOrgId(orgId);
+              setSidebarOpen(false);
+            }}
+            currentUserRole={currentUserRole}
+          />
+        </SheetContent>
+      </Sheet>
+
       <div className="flex-1 flex flex-col overflow-hidden bg-background">
         <header className="border-b bg-card/80 backdrop-blur-md sticky top-0 z-10 shadow-sm">
-          <div className="flex items-center justify-between px-8 py-5">
-            <div className="flex-1 flex items-center gap-8">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="h-11 bg-muted/50 p-1 inline-flex">
-                  <TabsTrigger 
-                    value="outline" 
-                    className="px-6 py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
-                  >
-                    Outline
-                  </TabsTrigger>
-                 <TabsTrigger 
-                    value="past-performance" 
-                    className="px-6 py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all relative"
-                  >
-                    Past Performance
-                    <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs font-semibold">1</Badge>
-                  </TabsTrigger>
-                   {/* <TabsTrigger 
-                    value="key-personnel" 
-                    className="px-6 py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all relative"
-                  >
-                    Key Personnel
-                    <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs font-semibold">1</Badge>
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="focus-documents"
-                    className="px-6 py-2.5 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
-                  >
-                    Focus Documents
-                  </TabsTrigger> */}
-                </TabsList>
-              </Tabs>
-              <div className="flex items-center gap-3">
-                <Button onClick={() => handleOpenSheet()} className="gap-2 h-10 px-4 shadow-sm">
+          <div className="flex flex-col gap-4 px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
+            {/* Top row: Menu button, tabs, user menu */}
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 lg:hidden">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSidebarOpen(true)}
+                  className="h-9 w-9"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </div>
+              
+              <div className="flex-1 flex items-center gap-4 lg:gap-8 min-w-0">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="h-10 sm:h-11 bg-muted/50 p-1 inline-flex w-full sm:w-auto">
+                    <TabsTrigger 
+                      value="outline" 
+                      className="px-3 sm:px-6 py-2 text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all flex-1 sm:flex-none"
+                    >
+                      Outline
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="past-performance" 
+                      className="px-3 sm:px-6 py-2 text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all relative flex-1 sm:flex-none"
+                    >
+                      <span className="hidden sm:inline">Past Performance</span>
+                      <span className="sm:hidden">Past</span>
+                      <Badge variant="secondary" className="ml-1 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center text-[10px] sm:text-xs font-semibold">1</Badge>
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+
+              {/* User menu - hidden on small screens, shown on md+ */}
+              <div className="hidden md:flex items-center gap-4">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="gap-2 sm:gap-3 h-auto py-2 sm:py-2.5 px-2 sm:px-4 hover:bg-muted/50 rounded-lg transition-colors">
+                      <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border-2 border-background shadow-sm">
+                        <AvatarImage src={user?.image} alt={user?.name} />
+                        <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs sm:text-sm">
+                          {user?.name?.charAt(0).toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="hidden lg:flex flex-col items-start">
+                        <span className="text-sm font-semibold text-foreground">{user?.name || 'User'}</span>
+                        <span className="text-xs text-muted-foreground">{user?.email || ''}</span>
+                      </div>
+                      <ChevronDown className="h-4 w-4 ml-1 text-muted-foreground hidden lg:block" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Settings2 className="mr-2 h-4 w-4" />
+                      Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>Logout</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+
+            {/* Bottom row: Action buttons - stack on mobile */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <Button onClick={() => handleOpenSheet()} className="gap-2 h-9 sm:h-10 px-3 sm:px-4 shadow-sm flex-1 sm:flex-none">
                   <Plus className="h-4 w-4" />
-                  Add Section
+                  <span className="hidden sm:inline">Add Section</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2 h-10 px-4">
+                    <Button variant="outline" className="gap-2 h-9 sm:h-10 px-3 sm:px-4 flex-1 sm:flex-none">
                       <Settings2 className="h-4 w-4" />
-                      Customize Columns
-                      <ChevronDown className="h-4 w-4" />
+                      <span className="hidden sm:inline">Customize Columns</span>
+                      <span className="sm:hidden">Columns</span>
+                      <ChevronDown className="h-4 w-4 hidden sm:block" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
@@ -520,64 +583,61 @@ export default function DashboardPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-            </div>
-            <div className="flex items-center gap-4 ml-8">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="gap-3 h-auto py-2.5 px-4 hover:bg-muted/50 rounded-lg transition-colors">
-                    <Avatar className="h-9 w-9 border-2 border-background shadow-sm">
-                      <AvatarImage src={user?.image} alt={user?.name} />
-                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                        {user?.name?.charAt(0).toUpperCase() || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col items-start">
-                      <span className="text-sm font-semibold text-foreground">{user?.name || 'User'}</span>
-                      <span className="text-xs text-muted-foreground">{user?.email || ''}</span>
-                    </div>
-                    <ChevronDown className="h-4 w-4 ml-1 text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <User className="mr-2 h-4 w-4" />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Settings2 className="mr-2 h-4 w-4" />
-                    Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>Logout</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+
+              {/* Mobile user menu */}
+              <div className="flex md:hidden items-center justify-end">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-9 w-9">
+                      <Avatar className="h-8 w-8 border-2 border-background shadow-sm">
+                        <AvatarImage src={user?.image} alt={user?.name} />
+                        <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
+                          {user?.name?.charAt(0).toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Settings2 className="mr-2 h-4 w-4" />
+                      Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>Logout</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </div>
         </header>
         <main className="flex-1 overflow-auto bg-gradient-to-b from-background to-muted/20">
-          <div className="p-8">
+          <div className="p-4 sm:p-6 lg:p-8">
             <div className="rounded-xl border bg-card shadow-lg overflow-hidden">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="hover:bg-transparent border-b bg-muted/30">
-                      <TableHead className="w-14 px-6">
+                      <TableHead className="w-12 sm:w-14 px-3 sm:px-6">
                         <Checkbox
                           checked={selectedRows.size === paginatedOutlines.length && paginatedOutlines.length > 0}
                           onCheckedChange={toggleAllRows}
                           className="border-2"
                         />
                       </TableHead>
-                      <TableHead className="w-10 px-4"></TableHead>
-                      {visibleColumns.header && <TableHead className="font-semibold text-sm px-6 py-4">Header</TableHead>}
-                      {visibleColumns.sectionType && <TableHead className="font-semibold text-sm px-6 py-4">Section Type</TableHead>}
-                      {visibleColumns.status && <TableHead className="font-semibold text-sm px-6 py-4">Status</TableHead>}
-                      {visibleColumns.target && <TableHead className="font-semibold text-sm px-6 py-4">Target</TableHead>}
-                      {visibleColumns.limit && <TableHead className="font-semibold text-sm px-6 py-4">Limit</TableHead>}
-                      {visibleColumns.reviewer && <TableHead className="font-semibold text-sm px-6 py-4">Reviewer</TableHead>}
-                      <TableHead className="w-[80px] px-6"></TableHead>
+                      <TableHead className="w-8 sm:w-10 px-2 sm:px-4"></TableHead>
+                      {visibleColumns.header && <TableHead className="font-semibold text-xs sm:text-sm px-3 sm:px-6 py-3 sm:py-4 min-w-[120px]">Header</TableHead>}
+                      {visibleColumns.sectionType && <TableHead className="font-semibold text-xs sm:text-sm px-3 sm:px-6 py-3 sm:py-4 min-w-[140px]">Section Type</TableHead>}
+                      {visibleColumns.status && <TableHead className="font-semibold text-xs sm:text-sm px-3 sm:px-6 py-3 sm:py-4 min-w-[100px]">Status</TableHead>}
+                      {visibleColumns.target && <TableHead className="font-semibold text-xs sm:text-sm px-3 sm:px-6 py-3 sm:py-4 min-w-[80px]">Target</TableHead>}
+                      {visibleColumns.limit && <TableHead className="font-semibold text-xs sm:text-sm px-3 sm:px-6 py-3 sm:py-4 min-w-[80px]">Limit</TableHead>}
+                      {visibleColumns.reviewer && <TableHead className="font-semibold text-xs sm:text-sm px-3 sm:px-6 py-3 sm:py-4 min-w-[100px]">Reviewer</TableHead>}
+                      <TableHead className="w-[60px] sm:w-[80px] px-3 sm:px-6"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -616,53 +676,53 @@ export default function DashboardPage() {
                           )}
                           onClick={() => handleOpenSheet(outline)}
                         >
-                          <TableCell className="w-14 px-6" onClick={(e) => e.stopPropagation()}>
+                          <TableCell className="w-12 sm:w-14 px-3 sm:px-6" onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                               checked={selectedRows.has(outline.id)}
                               onCheckedChange={() => toggleRowSelection(outline.id)}
                               className="border-2"
                             />
                           </TableCell>
-                          <TableCell className="w-10 px-4">
+                          <TableCell className="w-8 sm:w-10 px-2 sm:px-4">
                             <GripVertical className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" />
                           </TableCell>
                           {visibleColumns.header && (
-                            <TableCell className="font-medium px-6 py-4">
-                              <span className="text-sm">{outline.header}</span>
+                            <TableCell className="font-medium px-3 sm:px-6 py-3 sm:py-4">
+                              <span className="text-xs sm:text-sm">{outline.header}</span>
                             </TableCell>
                           )}
                           {visibleColumns.sectionType && (
-                            <TableCell className="px-6 py-4">
-                              <Badge variant="outline" className="text-xs font-normal">
+                            <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                              <Badge variant="outline" className="text-[10px] sm:text-xs font-normal">
                                 {formatSectionType(outline.sectionType)}
                               </Badge>
                             </TableCell>
                           )}
                           {visibleColumns.status && (
-                            <TableCell className="px-6 py-4">
-                              <Badge variant={getStatusVariant(outline.status)} className="text-xs">
+                            <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                              <Badge variant={getStatusVariant(outline.status)} className="text-[10px] sm:text-xs">
                                 {outline.status.replace(/_/g, ' ')}
                               </Badge>
                             </TableCell>
                           )}
                           {visibleColumns.target && (
-                            <TableCell className="px-6 py-4">
-                              <span className="text-sm font-medium">{outline.target ?? '-'}</span>
+                            <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                              <span className="text-xs sm:text-sm font-medium">{outline.target ?? '-'}</span>
                             </TableCell>
                           )}
                           {visibleColumns.limit && (
-                            <TableCell className="px-6 py-4">
-                              <span className="text-sm font-medium">{outline.limit ?? '-'}</span>
+                            <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                              <span className="text-xs sm:text-sm font-medium">{outline.limit ?? '-'}</span>
                             </TableCell>
                           )}
                           {visibleColumns.reviewer && (
-                            <TableCell className="px-6 py-4">
-                              <span className="text-sm text-muted-foreground">
+                            <TableCell className="px-3 sm:px-6 py-3 sm:py-4">
+                              <span className="text-xs sm:text-sm text-muted-foreground">
                                 {outline.reviewer}
                               </span>
                             </TableCell>
                           )}
-                          <TableCell onClick={(e) => e.stopPropagation()}>
+                          <TableCell onClick={(e) => e.stopPropagation()} className="px-3 sm:px-6">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button
@@ -709,17 +769,17 @@ export default function DashboardPage() {
                 </Table>
               </div>
               {/* Bottom Navigation */}
-              <div className="flex items-center justify-between border-t px-6 py-4 bg-muted/40 backdrop-blur-sm">
-                <div className="text-sm font-medium text-foreground">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 border-t px-4 sm:px-6 py-4 bg-muted/40 backdrop-blur-sm">
+                <div className="text-xs sm:text-sm font-medium text-foreground">
                   {selectedRows.size > 0 ? (
                     <span className="text-primary">{selectedRows.size} of {outlines.length} row(s) selected.</span>
                   ) : (
                     <span className="text-muted-foreground">{outlines.length} row(s) total</span>
                   )}
                 </div>
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm text-muted-foreground font-medium">Rows per page</span>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 sm:gap-6">
+                  <div className="flex items-center justify-between sm:justify-start gap-3">
+                    <span className="text-xs sm:text-sm text-muted-foreground font-medium whitespace-nowrap">Rows per page</span>
                     <Select
                       value={rowsPerPage.toString()}
                       onChange={(e) => {
@@ -734,46 +794,46 @@ export default function DashboardPage() {
                       <option value="100">100</option>
                     </Select>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground font-medium min-w-[100px] text-right">
+                  <div className="flex items-center justify-between sm:justify-start gap-2">
+                    <span className="text-xs sm:text-sm text-muted-foreground font-medium whitespace-nowrap">
                       Page {currentPage} of {totalPages || 1}
                     </span>
                     <div className="flex items-center gap-1">
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-9 w-9 border-2"
+                        className="h-8 w-8 sm:h-9 sm:w-9 border-2"
                         onClick={() => setCurrentPage(1)}
                         disabled={currentPage === 1}
                       >
-                        <ChevronsLeft className="h-4 w-4" />
+                        <ChevronsLeft className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-9 w-9 border-2"
+                        className="h-8 w-8 sm:h-9 sm:w-9 border-2"
                         onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                         disabled={currentPage === 1}
                       >
-                        <ChevronLeft className="h-4 w-4" />
+                        <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-9 w-9 border-2"
+                        className="h-8 w-8 sm:h-9 sm:w-9 border-2"
                         onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                         disabled={currentPage >= totalPages}
                       >
-                        <ChevronRight className="h-4 w-4" />
+                        <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-9 w-9 border-2"
+                        className="h-8 w-8 sm:h-9 sm:w-9 border-2"
                         onClick={() => setCurrentPage(totalPages)}
                         disabled={currentPage >= totalPages}
                       >
-                        <ChevronsRight className="h-4 w-4" />
+                        <ChevronsRight className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
                   </div>
@@ -785,10 +845,10 @@ export default function DashboardPage() {
       </div>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="sm:max-w-[540px]">
+        <SheetContent className="w-full sm:max-w-[540px] overflow-y-auto">
           <SheetHeader className="space-y-3 pb-4 border-b">
-            <SheetTitle className="text-2xl">{editingOutline ? 'Edit Outline' : 'Add Outline'}</SheetTitle>
-            <SheetDescription className="text-base">
+            <SheetTitle className="text-xl sm:text-2xl">{editingOutline ? 'Edit Outline' : 'Add Outline'}</SheetTitle>
+            <SheetDescription className="text-sm sm:text-base">
               {editingOutline ? 'Update the outline details below' : 'Fill in the details to create a new outline section'}
             </SheetDescription>
           </SheetHeader>
@@ -804,7 +864,7 @@ export default function DashboardPage() {
                 required
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="sectionType" className="text-sm font-medium">Section Type</Label>
                 <Select
@@ -849,7 +909,7 @@ export default function DashboardPage() {
                 <option value="Mami">Mami</option>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="target" className="text-sm font-medium">Target</Label>
                 <Input
@@ -873,8 +933,8 @@ export default function DashboardPage() {
                 />
               </div>
             </div>
-            <div className="flex gap-3 pt-6 border-t">
-              <Button type="submit" className="flex-1" disabled={submitLoading}>
+            <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t">
+              <Button type="submit" className="flex-1 sm:flex-none" disabled={submitLoading}>
                 {submitLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -888,6 +948,7 @@ export default function DashboardPage() {
                 <Button
                   type="button"
                   variant="destructive"
+                  className="flex-1 sm:flex-none"
                   onClick={() => {
                     setOutlineToDelete(editingOutline.id);
                     setDeleteDialogOpen(true);
@@ -898,7 +959,7 @@ export default function DashboardPage() {
                   Delete
                 </Button>
               )}
-              <Button type="button" variant="outline" onClick={handleCloseSheet}>
+              <Button type="button" variant="outline" className="flex-1 sm:flex-none" onClick={handleCloseSheet}>
                 Cancel
               </Button>
             </div>
