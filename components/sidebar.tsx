@@ -15,6 +15,7 @@ import {
   User,
   Settings2
 } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { useState } from 'react';
 import { useOrganizations } from '@/contexts/OrganizationsContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -194,6 +195,10 @@ export function Sidebar({ organizations, selectedOrgId, onOrgChange, currentUser
 
       {/* Footer Actions */}
       <div className="border-t border-sidebar-border p-4 space-y-2 bg-sidebar/50">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3">Theme</span>
+          <ThemeToggle />
+        </div>
         <Button
           variant="outline"
           className="w-full justify-start gap-2"

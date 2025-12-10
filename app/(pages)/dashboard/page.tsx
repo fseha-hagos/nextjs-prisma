@@ -444,10 +444,10 @@ export default function DashboardPage() {
       <div className="flex-1 flex flex-col overflow-hidden bg-background">
         <header className="border-b bg-card/80 backdrop-blur-md sticky top-0 z-10 shadow-sm">
           <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
-            {/* Top row: Menu button, tabs, and user menu */}
-            <div className="flex items-center justify-between gap-3 sm:gap-4">
+            {/* Top row: Menu button, tabs, and action buttons */}
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
               {/* Mobile menu button */}
-              <div className="flex items-center gap-3 lg:hidden">
+              <div className="flex items-center gap-2 lg:hidden">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -479,22 +479,21 @@ export default function DashboardPage() {
                   </TabsList>
                 </Tabs>
               </div>
-            </div>
 
-            {/* Action buttons row */}
-            <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-4">
-              <Button onClick={() => handleOpenSheet()} className="gap-2 h-9 sm:h-10 px-3 sm:px-4 shadow-sm">
+              {/* Action buttons */}
+              <div className="flex items-center gap-2">
+                <Button onClick={() => handleOpenSheet()} className="gap-2 h-9 sm:h-10 px-3 sm:px-4 shadow-sm">
                   <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Add Section</span>
-                <span className="sm:hidden">Add</span>
+                  <span className="hidden sm:inline">Add Section</span>
+                  <span className="sm:hidden">Add</span>
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="gap-2 h-9 sm:h-10 px-3 sm:px-4">
+                    <Button variant="outline" className="gap-2 h-9 sm:h-10 px-3 sm:px-4">
                       <Settings2 className="h-4 w-4" />
-                    <span className="hidden sm:inline">Customize Columns</span>
-                    <span className="sm:hidden">Columns</span>
-                    <ChevronDown className="h-4 w-4 hidden sm:block" />
+                      <span className="hidden sm:inline">Customize Columns</span>
+                      <span className="sm:hidden">Columns</span>
+                      <ChevronDown className="h-4 w-4 hidden sm:block" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
@@ -550,6 +549,7 @@ export default function DashboardPage() {
                     </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              </div>
             </div>
           </div>
         </header>
