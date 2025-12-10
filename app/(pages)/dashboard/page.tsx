@@ -25,6 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 type Outline = {
   id: string;
@@ -547,8 +548,13 @@ export default function DashboardPage() {
                       />
                       Reviewer
                     </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {/* Theme toggle - rightmost */}
+              <div className="flex items-center">
+                <ThemeToggle />
               </div>
             </div>
           </div>
