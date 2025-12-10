@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Plus, Trash2, Loader2, UserPlus, Building2 } from 'lucide-react';
+import { Plus, Trash2, Loader2, UserPlus, Building2, Menu } from 'lucide-react';
 import { useOrganizations } from '@/contexts/OrganizationsContext';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -40,6 +40,7 @@ export default function TeamPage() {
   const [emailError, setEmailError] = useState<string>('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isOwner = currentUserRole === 'owner';
   const currentOrgName = organizations.find(o => o.id === selectedOrgId)?.name || '';
@@ -245,25 +246,56 @@ export default function TeamPage() {
 
   return (
     <div className="flex h-screen">
-      <Sidebar
-        organizations={organizations}
-        selectedOrgId={selectedOrgId}
-        onOrgChange={setSelectedOrgId}
-        currentUserRole={currentUserRole}
-      />
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block lg:w-64 xl:w-72">
+        <Sidebar
+          organizations={organizations}
+          selectedOrgId={selectedOrgId}
+          onOrgChange={setSelectedOrgId}
+          currentUserRole={currentUserRole}
+        />
+      </div>
+      
+      {/* Mobile Sidebar Sheet */}
+      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <SheetContent side="left" className="w-72 p-0 sm:max-w-sm">
+          <Sidebar
+            organizations={organizations}
+            selectedOrgId={selectedOrgId}
+            onOrgChange={(orgId) => {
+              setSelectedOrgId(orgId);
+              setSidebarOpen(false);
+            }}
+            currentUserRole={currentUserRole}
+            onClose={() => setSidebarOpen(false)}
+          />
+        </SheetContent>
+      </Sheet>
+
       <div className="flex-1 flex flex-col overflow-hidden bg-background">
         <header className="border-b bg-card/50 backdrop-blur-sm">
-          <div className="flex items-center justify-between px-6 py-4">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Team Info / Setup</h1>
-              {currentOrgName && (
-                <p className="text-sm text-muted-foreground mt-1">{currentOrgName}</p>
-              )}
+          <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(true)}
+                className="h-9 w-9 lg:hidden"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl font-semibold tracking-tight truncate">Team Info / Setup</h1>
+                {currentOrgName && (
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1 truncate">{currentOrgName}</p>
+                )}
+              </div>
             </div>
             {isOwner && (
-              <Button onClick={() => setInviteSheetOpen(true)} className="gap-2">
+              <Button onClick={() => setInviteSheetOpen(true)} className="gap-2 h-9 sm:h-10 px-3 sm:px-4">
                 <UserPlus className="h-4 w-4" />
-                Invite Member
+                <span className="hidden sm:inline">Invite Member</span>
+                <span className="sm:hidden">Invite</span>
               </Button>
             )}
           </div>

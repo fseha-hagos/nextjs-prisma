@@ -21,9 +21,10 @@ interface SidebarProps {
   selectedOrgId: string | null;
   onOrgChange: (orgId: string) => void;
   currentUserRole?: string;
+  onClose?: () => void;
 }
 
-export function Sidebar({ organizations, selectedOrgId, onOrgChange, currentUserRole }: SidebarProps) {
+export function Sidebar({ organizations, selectedOrgId, onOrgChange, currentUserRole, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
@@ -109,6 +110,7 @@ export function Sidebar({ organizations, selectedOrgId, onOrgChange, currentUser
           </h3>
           <Link
             href={`/dashboard?orgId=${selectedOrgId}`}
+            onClick={onClose}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
               pathname === '/dashboard'
@@ -121,6 +123,7 @@ export function Sidebar({ organizations, selectedOrgId, onOrgChange, currentUser
           </Link>
           <Link
             href={`/team?orgId=${selectedOrgId}`}
+            onClick={onClose}
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
               pathname === '/team'
@@ -139,7 +142,10 @@ export function Sidebar({ organizations, selectedOrgId, onOrgChange, currentUser
         <Button
           variant="outline"
           className="w-full justify-start gap-2"
-          onClick={() => router.push('/organization/create')}
+          onClick={() => {
+            router.push('/organization/create');
+            onClose?.();
+          }}
         >
           <Plus className="h-4 w-4" />
           Create Organization
@@ -147,7 +153,10 @@ export function Sidebar({ organizations, selectedOrgId, onOrgChange, currentUser
         <Button
           variant="outline"
           className="w-full justify-start gap-2"
-          onClick={() => router.push('/organization/join')}
+          onClick={() => {
+            router.push('/organization/join');
+            onClose?.();
+          }}
         >
           <LogIn className="h-4 w-4" />
           Join Organization
