@@ -41,9 +41,26 @@ export default function TeamPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [memberToDelete, setMemberToDelete] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState<{ name: string; email: string; image?: string } | null>(null);
 
   const isOwner = currentUserRole === 'owner';
   const currentOrgName = organizations.find(o => o.id === selectedOrgId)?.name || '';
+
+  // Fetch user data
+  useEffect(() => {
+    fetch('/api/auth/session', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.user) {
+          setUser({
+            name: data.user.name || data.user.email?.split('@')[0] || 'User',
+            email: data.user.email || '',
+            image: data.user.image || undefined,
+          });
+        }
+      })
+      .catch(err => console.error('Failed to fetch user:', err));
+  }, []);
 
   useEffect(() => {
     if (selectedOrgId && !orgsLoading) {
@@ -253,6 +270,7 @@ export default function TeamPage() {
           selectedOrgId={selectedOrgId}
           onOrgChange={setSelectedOrgId}
           currentUserRole={currentUserRole}
+          user={user}
         />
       </div>
       
@@ -268,6 +286,7 @@ export default function TeamPage() {
             }}
             currentUserRole={currentUserRole}
             onClose={() => setSidebarOpen(false)}
+            user={user}
           />
         </SheetContent>
       </Sheet>

@@ -11,10 +11,21 @@ import {
   LogIn, 
   LogOut,
   ChevronDown,
-  Check
+  Check,
+  User,
+  Settings2
 } from 'lucide-react';
 import { useState } from 'react';
 import { useOrganizations } from '@/contexts/OrganizationsContext';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
 
 interface SidebarProps {
   organizations: Array<{ id: string; name: string }>;
@@ -22,9 +33,10 @@ interface SidebarProps {
   onOrgChange: (orgId: string) => void;
   currentUserRole?: string;
   onClose?: () => void;
+  user?: { name: string; email: string; image?: string } | null;
 }
 
-export function Sidebar({ organizations, selectedOrgId, onOrgChange, currentUserRole, onClose }: SidebarProps) {
+export function Sidebar({ organizations, selectedOrgId, onOrgChange, currentUserRole, onClose, user }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
@@ -53,6 +65,49 @@ export function Sidebar({ organizations, selectedOrgId, onOrgChange, currentUser
       </div>
       
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        {/* User Profile */}
+        {user && (
+          <div className="space-y-2">
+            <h3 className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Account
+            </h3>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-sidebar-accent/50 transition-colors">
+                  <Avatar className="h-8 w-8 border-2 border-sidebar-border shadow-sm">
+                    <AvatarImage src={user.image} alt={user.name} />
+                    <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
+                      {user.name?.charAt(0).toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 flex flex-col items-start min-w-0">
+                    <span className="text-sm font-semibold text-foreground truncate w-full">{user.name || 'User'}</span>
+                    <span className="text-xs text-muted-foreground truncate w-full">{user.email || ''}</span>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem>
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Settings2 className="mr-2 h-4 w-4" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleSignOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+
         {/* Organization Selector */}
         <div className="space-y-2">
           <h3 className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">

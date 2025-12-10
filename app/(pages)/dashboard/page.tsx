@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
-import { MoreVertical, Plus, GripVertical, Edit2, Trash2, Loader2, Building2, RefreshCw, ChevronDown, Settings2, User, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Menu } from 'lucide-react';
+import { MoreVertical, Plus, GripVertical, Edit2, Trash2, Loader2, Building2, RefreshCw, ChevronDown, Settings2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Menu } from 'lucide-react';
 import { useOrganizations } from '@/contexts/OrganizationsContext';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
@@ -17,7 +17,6 @@ import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -416,12 +415,13 @@ export default function DashboardPage() {
     <div className="flex h-screen">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block lg:w-64 xl:w-72">
-      <Sidebar
-        organizations={organizations}
-        selectedOrgId={selectedOrgId}
-        onOrgChange={setSelectedOrgId}
-        currentUserRole={currentUserRole}
-      />
+        <Sidebar
+          organizations={organizations}
+          selectedOrgId={selectedOrgId}
+          onOrgChange={setSelectedOrgId}
+          currentUserRole={currentUserRole}
+          user={user}
+        />
       </div>
       
       {/* Mobile Sidebar Sheet */}
@@ -436,6 +436,7 @@ export default function DashboardPage() {
             }}
             currentUserRole={currentUserRole}
             onClose={() => setSidebarOpen(false)}
+            user={user}
           />
         </SheetContent>
       </Sheet>
@@ -459,89 +460,24 @@ export default function DashboardPage() {
               
               {/* Tabs */}
               <div className="flex-1 min-w-0">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                   <TabsList className="h-9 sm:h-10 bg-muted/50 p-1 inline-flex">
-                  <TabsTrigger 
-                    value="outline" 
+                    <TabsTrigger 
+                      value="outline" 
                       className="px-4 sm:px-6 py-1.5 sm:py-2 text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
-                  >
-                    Outline
-                  </TabsTrigger>
-                 <TabsTrigger 
-                    value="past-performance" 
+                    >
+                      Outline
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="past-performance" 
                       className="px-4 sm:px-6 py-1.5 sm:py-2 text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all relative"
-                  >
+                    >
                       <span className="hidden sm:inline">Past Performance</span>
                       <span className="sm:hidden">Past</span>
                       <Badge variant="secondary" className="ml-1.5 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center text-[10px] sm:text-xs font-semibold">1</Badge>
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-              </div>
-
-              {/* User menu - desktop */}
-              <div className="hidden md:flex items-center">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="gap-2 h-auto py-2 px-3 hover:bg-muted/50 rounded-lg transition-colors">
-                      <Avatar className="h-8 w-8 border-2 border-background shadow-sm">
-                        <AvatarImage src={user?.image} alt={user?.name} />
-                        <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
-                          {user?.name?.charAt(0).toUpperCase() || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="hidden lg:flex flex-col items-start">
-                        <span className="text-sm font-semibold text-foreground leading-tight">{user?.name || 'User'}</span>
-                        <span className="text-xs text-muted-foreground leading-tight">{user?.email || ''}</span>
-                      </div>
-                      <ChevronDown className="h-4 w-4 ml-1 text-muted-foreground hidden lg:block" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      <User className="mr-2 h-4 w-4" />
-                      Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Settings2 className="mr-2 h-4 w-4" />
-                      Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>Logout</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
-              {/* User menu - mobile */}
-              <div className="flex md:hidden items-center">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-9 w-9">
-                      <Avatar className="h-8 w-8 border-2 border-background shadow-sm">
-                        <AvatarImage src={user?.image} alt={user?.name} />
-                        <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
-                          {user?.name?.charAt(0).toUpperCase() || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      <User className="mr-2 h-4 w-4" />
-                      Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Settings2 className="mr-2 h-4 w-4" />
-                      Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>Logout</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </div>
             </div>
 
