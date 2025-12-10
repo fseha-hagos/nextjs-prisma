@@ -446,9 +446,9 @@ export default function DashboardPage() {
         <header className="border-b bg-card/80 backdrop-blur-md sticky top-0 z-10 shadow-sm">
           <div className="px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
             {/* Top row: Menu button, tabs, and action buttons */}
-            <div className="flex items-center justify-between gap-2 sm:gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {/* Mobile menu button */}
-              <div className="flex items-center gap-2 lg:hidden">
+              <div className="flex items-center lg:hidden flex-shrink-0">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -465,35 +465,33 @@ export default function DashboardPage() {
                   <TabsList className="h-9 sm:h-10 bg-muted/50 p-1 inline-flex">
                     <TabsTrigger 
                       value="outline" 
-                      className="px-4 sm:px-6 py-1.5 sm:py-2 text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
+                      className="px-3 sm:px-6 py-1.5 sm:py-2 text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
                     >
                       Outline
                     </TabsTrigger>
                     <TabsTrigger 
                       value="past-performance" 
-                      className="px-4 sm:px-6 py-1.5 sm:py-2 text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all relative"
+                      className="px-3 sm:px-6 py-1.5 sm:py-2 text-xs sm:text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all relative"
                     >
                       <span className="hidden sm:inline">Past Performance</span>
                       <span className="sm:hidden">Past</span>
-                      <Badge variant="secondary" className="ml-1.5 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center text-[10px] sm:text-xs font-semibold">1</Badge>
+                      <Badge variant="secondary" className="ml-1 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center text-[10px] sm:text-xs font-semibold">1</Badge>
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
               </div>
 
-              {/* Action buttons */}
-              <div className="flex items-center gap-2">
-                <Button onClick={() => handleOpenSheet()} className="gap-2 h-9 sm:h-10 px-3 sm:px-4 shadow-sm">
+              {/* Action buttons - hide on very small screens, show icons only on mobile */}
+              <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+                <Button onClick={() => handleOpenSheet()} className="gap-1 sm:gap-2 h-9 sm:h-10 px-2 sm:px-4 shadow-sm">
                   <Plus className="h-4 w-4" />
                   <span className="hidden sm:inline">Add Section</span>
-                  <span className="sm:hidden">Add</span>
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2 h-9 sm:h-10 px-3 sm:px-4">
+                    <Button variant="outline" className="gap-1 sm:gap-2 h-9 sm:h-10 px-2 sm:px-4">
                       <Settings2 className="h-4 w-4" />
                       <span className="hidden sm:inline">Customize Columns</span>
-                      <span className="sm:hidden">Columns</span>
                       <ChevronDown className="h-4 w-4 hidden sm:block" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -552,8 +550,8 @@ export default function DashboardPage() {
                 </DropdownMenu>
               </div>
 
-              {/* Theme toggle - rightmost */}
-              <div className="flex items-center">
+              {/* Theme toggle - always visible, rightmost */}
+              <div className="flex items-center flex-shrink-0">
                 <ThemeToggle />
               </div>
             </div>
